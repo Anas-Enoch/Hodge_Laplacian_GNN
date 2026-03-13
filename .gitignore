@@ -1,10 +1,12 @@
 .DS_Store
-data/TNBC_GSE210616/
-data/raw_Visium/
 .DS_Store
-data/raw_Visium/
-data/TNBC_GSE210616/
 .DS_Store
+.DS_Store
+*.webarchive
+.DS_Store
+*.webarchive
+.DS_Store
+*.webarchive
 data/raw_Visium/
 data/TNBC_GSE210616/
 .DS_Store

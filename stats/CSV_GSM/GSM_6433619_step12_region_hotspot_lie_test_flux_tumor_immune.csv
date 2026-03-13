@@ -1,0 +1,3 @@
+sample_id,flux_name,region_name,q_hotspot,threshold,n_hotspots,n_region_faces,hotspots_in_region,frac_hot_in_region,frac_region,enrichment_ratio,null_mean_stat,null_std_stat,empirical_p
+GSM_6433619,flux_tumor_immune,immune_enriched,0.95,0.000603428290965785,218,26,0,0.0,0.005963302752293578,0.0,0.0008480713236666601,7.177047300460844e-07,1.0
+GSM_6433619,flux_tumor_immune,interface_like,0.95,0.000603428290965785,218,133,7,0.03211009174311927,0.030504587155963304,1.0526315789473684,0.0005075192851281935,9.862309764996723e-07,0.001996007984031936

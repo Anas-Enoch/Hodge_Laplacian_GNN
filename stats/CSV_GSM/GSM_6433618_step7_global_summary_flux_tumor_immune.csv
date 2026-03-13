@@ -1,0 +1,2 @@
+sample_id,flux_name,mean_total_energy,mean_exact_energy,mean_coexact_energy,mean_harmonic_energy,mean_frac_exact,mean_frac_coexact,mean_frac_harmonic
+GSM_6433618,flux_tumor_immune,1.4019576582363363e-08,3.831423427164819e-09,1.017218244614077e-08,5.911211257819995e-19,0.7516097635683543,1.1565341017145365,3.3188372722150877e-10

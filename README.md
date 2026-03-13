@@ -28,32 +28,28 @@ The present analysis focuses on a breast tumor tissue section and asks whether c
 ## Repository structure
 
 ```text
-Hodge_Laplacian_GNN/
+Hodge_Laplacian_GNN
+│
 ├── README.md
-├── requirements.txt
-├── scripts/
-│   ├── open_visium.py
-│   ├── step1_visium_map.py
-│   ├── step2_define_regions.py
-│   ├── step3_build_spatial_graph.py
-│   ├── step4_compute_proxy_flux_residuals.py
-│   ├── step5_multi_proxy_residuals.py
-│   ├── step6_hodge_flux_decomposition.py
-│   ├── step7_non_gradient_flux.py
-│   └── step8_compute_coexact_and_curl.py
-├── data/
-│   ├── README_data.md
-│   └── .gitkeep
-├── results/
-│   ├── figures/
-│   ├── stats/
-│   └── tables/
-├── docs/
-│   └── manuscript_notes.md
-├── Figures/
-├── figures_Latex/
+├── figures/
 ├── tables/
-└── stats/
+│
+├── scripts_tnbc/
+├── scripts_visium/
+│
+├── stats/
+│   ├── CSV_GSM/
+│   └── CSV_visium/
+│
+├── GSM_visium_figures/
+│
+├── data/
+│   ├── TNBC_GSE210616/
+│   ├── raw_Visium/
+│   ├── README_data.md_GSM.md
+│   └── README_data.md_visium.md
+│
+└── reference.bib
 ```
 
 ## Minimal pipeline overview
@@ -169,3 +165,80 @@ The current spatial transcriptomics example uses publicly available data. No ide
 ## Citation and reuse
 
 If you reuse the code, operators, or workflow logic from this repository, cite the associated manuscript and clearly indicate any dataset-specific modifications or alternative flux definitions.
+
+
+## Spatial Transcriptomics Cohort Validation (TNBC)
+
+To biologically validate the operator-level transport phenotype, we applied the full pipeline to spatial transcriptomics data from the TNBC cohort **GSE210616**.
+
+Each tissue section is processed through a structured pipeline that constructs spatial transport fields and tests their geometric structure using Hodge decomposition and an operator-derived Lie null model.
+
+### Pipeline overview
+
+The cohort analysis is implemented in `scripts_tnbc/`.
+
+| Step | Script | Description |
+|-----|------|-------------|
+| 1 | `step1_visium_map.py` | Load Visium data and compute marker scores |
+| 2 | `step2_tnbc_regions.py` | Assign tissue regions (tumor / immune / interface) |
+| 3 | `step3_tnbc_spatial_graph.py` | Construct spatial cell complex |
+| 4 | `step4_residualized_flux.py` | Build residualized proxy flux fields |
+| 5 | `step5_node_residuals.py` | Compute conservation residuals |
+| 6 | `step6_tnbc_hodge_decomposition.py` | Perform Hodge decomposition |
+| 7 | `step7_transport_summary.py` | Summarize flux components |
+| 8 | `step8_cohort_summary.py` | Aggregate results across samples |
+| 9 | `step9_curl_maps.py` | Compute face curl density |
+| 10 | `step10_marker_null.py` | Marker-randomization null |
+| 11 | `step11_lie_structured_null.py` | Operator-derived Lie null |
+| 12 | `step12_region_hotspot_lie_test.py` | Region-level enrichment vs null |
+
+---
+
+### Key outputs
+
+The pipeline produces:
+
+**Flux decomposition**
+stats/CSV_GSM/step6_edges_hodge_flux_.csv
+
+**Curl statistics**
+stats/CSV_GSM/step9_face_curl.csv
+
+**Lie-null validation**
+stats/CSV_GSM/step11_lie_null_summary.csv
+
+**Region enrichment tests**
+stats/CSV_GSM/step12_region_hotspot_lie_test.csv
+
+
+---
+
+### Figures
+
+Generated figures are stored in:
+GSM_visium_figures/
+
+Important outputs include:
+
+| Figure | Description |
+|------|-------------|
+| `step6_hodge_maps_flux_*` | Hodge decomposition visualization |
+| `step9_curl_maps_flux_*` | Curl density maps |
+| `step11_lie_hotspots_flux_*` | High-curl hotspot locations |
+| `step11_lie_null_hist_*` | Lie-null calibration plots |
+
+---
+
+### Example result
+
+For sample **GSM_6433618**:
+Interface hotspot enrichment = 1.456
+p ≈ 0.002
+
+For sample **GSM_6433619**:
+Interface hotspot enrichment = 1.053
+p ≈ 0.002
+
+These results indicate that rotational transport motifs are **significantly enriched at tumor–immune interfaces**, while global curl statistics remain consistent with the Lie null model.
+
+This pattern supports the interpretation that transport geometry becomes structured specifically at biological boundaries.

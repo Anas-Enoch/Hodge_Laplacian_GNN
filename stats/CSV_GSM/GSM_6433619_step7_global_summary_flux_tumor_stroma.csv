@@ -1,0 +1,2 @@
+sample_id,flux_name,mean_total_energy,mean_exact_energy,mean_coexact_energy,mean_harmonic_energy,mean_frac_exact,mean_frac_coexact,mean_frac_harmonic
+GSM_6433619,flux_tumor_stroma,2.6336567101418185e-06,2.4641344883008932e-06,1.6727527732225352e-07,6.297612773879157e-17,1.1726036548918932,0.168103672828325,1.5451906558523744e-10

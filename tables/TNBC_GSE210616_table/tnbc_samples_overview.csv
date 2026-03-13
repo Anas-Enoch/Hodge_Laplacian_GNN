@@ -1,0 +1,3 @@
+sample_id,n_spots,n_tumor_enriched,n_stroma_enriched,n_immune_enriched,n_interface_like,n_other
+GSM_6433618,2207,236,546,28,275,1122
+GSM_6433619,2196,276,537,47,194,1142

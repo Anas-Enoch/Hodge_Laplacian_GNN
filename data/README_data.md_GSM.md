@@ -89,3 +89,23 @@ python -m scripts_tnbc.step11_lie_structured_null
 
 The analysis identifies **localized rotational transport structure** at tumor–immune interfaces, detected through the coexact component of the Hodge decomposition and validated against a spatially aware Lie-structured null model.
 
+### GSM_6433618 – TNBC spatial transcriptomics
+
+Additional analyses produced during the PDE-constrained learning stage:
+
+**Training diagnostics**
+
+- `GSM_6433618_step14_gnn_training_history_flux_tumor_immune.png`  
+  Training curves for the PDE-constrained GNN showing total loss, data loss, divergence penalty, and smoothness penalty, together with correlation and MAE on the standardized target.
+
+**Transport model comparison**
+
+- `GSM_6433618_step16_transport_equation_figure_flux_tumor_immune.png`  
+  Four-panel summary of the operator-level mechanistic stress test:
+
+  A. Observed proxy transport field derived from marker gradients.  
+  B. PDE-constrained learned transport field.  
+  C. Spatial localization of top 1% curl hotspots.  
+  D. Collapse of coexact energy under conservation-constrained learning.
+
+These results illustrate the mechanistic mismatch between proxy-derived transport structure and conservation-constrained learned transport fields.

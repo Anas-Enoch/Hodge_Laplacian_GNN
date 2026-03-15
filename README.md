@@ -1,3 +1,27 @@
+### Manuscript version
+
+The code corresponding to the manuscript
+
+*Operator-Level Transport Phenotyping with PDE-Constrained Hodge–Laplacian Graph Neural Networks*
+
+is archived in the release:
+
+**v1.0-manuscript**
+
+## Repository structure
+
+This repository contains two analysis pipelines.
+
+### scripts_visium/
+Prototype operator diagnostics on Visium spatial transcriptomics data.
+
+### scripts_tnbc/
+Full TNBC cohort pipeline including:
+- operator diagnostics
+- curl null tests
+- PDE-constrained GNN training
+- hybrid transport decomposition
+
 # Hodge_Laplacian_GNN
 
 Discrete Hodge-theoretic analysis of spatial transcriptomics transport structure, with an emphasis on falsifiable diagnostics rather than unconstrained prediction. The repository combines operator construction on spatial graphs, region-aware biological annotation, scalar transport null models, non-gradient wedge fluxes, and Hodge decomposition into exact, coexact, and harmonic components.
@@ -53,6 +77,9 @@ Hodge_Laplacian_GNN
 ```
 
 ## Minimal pipeline overview
+## Prototype Visium pipeline (`scripts_visium/`)
+
+The following minimal pipeline describes the original Visium operator-diagnostic workflow implemented in `scripts_visium/`.
 
 ### Step 1 — marker scoring
 `step1_visium_map.py`
@@ -167,48 +194,89 @@ The current spatial transcriptomics example uses publicly available data. No ide
 If you reuse the code, operators, or workflow logic from this repository, cite the associated manuscript and clearly indicate any dataset-specific modifications or alternative flux definitions.
 
 
-## Spatial Transcriptomics Cohort Validation (TNBC)
+### Extension to TNBC cohort analysis
+
+The full manuscript pipeline extends this prototype workflow to the TNBC spatial transcriptomics cohort using the scripts in `scripts_tnbc/`.
+
+Additional stages include:
+
+- cohort-scale region enrichment tests
+- Lie-structured null diagnostics
+- PDE-constrained Hodge–Laplacian graph neural network training
+- operator analysis of learned transport fields
+- hybrid gradient/stream potential reconstruction
+
+These stages correspond to:
+
+scripts_tnbc/step9_tnbc_curl_maps.py
+scripts_tnbc/step10_curl_null_test.py
+scripts_tnbc/step11_lie_structured_null.py
+scripts_tnbc/step12_region_hotspot_lie_test.py
+scripts_tnbc/step13_tnbc_prepare_gnn_data.py
+scripts_tnbc/step14_tnbc_train_pde_gnn.py
+scripts_tnbc/step15_tnbc_analyze_gnn_flux.py
+scripts_tnbc/step16_transport_equation_figure.py
+scripts_tnbc/step17_tnbc_solve_hybrid_potentials.py
 
 To biologically validate the operator-level transport phenotype, we applied the full pipeline to spatial transcriptomics data from the TNBC cohort **GSE210616**.
 
-Each tissue section is processed through a structured pipeline that constructs spatial transport fields and tests their geometric structure using Hodge decomposition and an operator-derived Lie null model.
+Each tissue section is processed through a structured pipeline that constructs spatial transport fields and tests their geometric structure using Hodge decomposition, null-model diagnostics, and conservation-constrained learning.
 
 ### Pipeline overview
 
+## Key manuscript figures
+
+The figures referenced in the manuscript are located in:
+
+GSM_visium_figures/GSM_6433618_fig/
+GSM_visium_figures/GSM_6433619_fig/
+
+These correspond to the TNBC Visium sections analyzed in the study.
 The cohort analysis is implemented in `scripts_tnbc/`.
 
 | Step | Script | Description |
 |-----|------|-------------|
-| 1 | `step1_visium_map.py` | Load Visium data and compute marker scores |
-| 2 | `step2_tnbc_regions.py` | Assign tissue regions (tumor / immune / interface) |
-| 3 | `step3_tnbc_spatial_graph.py` | Construct spatial cell complex |
-| 4 | `step4_residualized_flux.py` | Build residualized proxy flux fields |
-| 5 | `step5_node_residuals.py` | Compute conservation residuals |
-| 6 | `step6_tnbc_hodge_decomposition.py` | Perform Hodge decomposition |
-| 7 | `step7_transport_summary.py` | Summarize flux components |
-| 8 | `step8_cohort_summary.py` | Aggregate results across samples |
-| 9 | `step9_curl_maps.py` | Compute face curl density |
-| 10 | `step10_marker_null.py` | Marker-randomization null |
-| 11 | `step11_lie_structured_null.py` | Operator-derived Lie null |
-| 12 | `step12_region_hotspot_lie_test.py` | Region-level enrichment vs null |
-
+| 1 | `step1_tnbc_map.py` | Load TNBC Visium data and compute marker scores |
+| 2 | `step2_tnbc_regions.py` | Assign tissue regions (tumor / stroma / immune / interface-like) |
+| 3 | `step3_tnbc_spatial_graph.py` | Construct spatial cell complex and incidence operators |
+| 4 | `step4_tnbc_flux_proxies.py` | Build proxy and residualized flux fields |
+| 5 | `step5_tnbc_flux_residuals.py` | Compute conservation-style residual summaries |
+| 6 | `step6_tnbc_hodge_decomposition.py` | Perform Hodge decomposition of flux fields |
+| 7 | `step7_tnbc_region_enrichment.py` | Region-level enrichment analysis of transport components |
+| 8 | `run_tnbc_screening.py` | Cohort-level orchestration / screening pipeline |
+| 9 | `step9_tnbc_curl_maps.py` | Compute and visualize face curl structure |
+| 10 | `step10_curl_null_test.py` | Randomized null test for curl structure |
+| 11 | `step11_lie_structured_null.py` | Operator-derived Lie-structured null |
+| 12 | `step12_region_hotspot_lie_test.py` | Region-level hotspot enrichment vs Lie null |
+| 13 | `step13_tnbc_prepare_gnn_data.py` | Prepare graph data for PDE-constrained GNN training |
+| 14 | `step14_tnbc_train_pde_gnn.py` | Train PDE-constrained Hodge-Laplacian GNN |
+| 15 | `step15_tnbc_analyze_gnn_flux.py` | Analyze learned GNN flux with operator diagnostics |
+| 16 | `step16_transport_equation_figure.py` | Generate transport-equation summary figure |
+| 17 | `step17_tnbc_solve_hybrid_potentials.py` | Solve hybrid gradient/stream potential decomposition |
 ---
 
 ### Key outputs
 
-The pipeline produces:
+Representative outputs are written to `stats/` and `visium_figures/`.
 
-**Flux decomposition**
-stats/CSV_GSM/step6_edges_hodge_flux_.csv
+Examples include:
 
-**Curl statistics**
-stats/CSV_GSM/step9_face_curl.csv
+**Proxy and learned flux summaries**
+- `stats/GSM_6433618_step14_gnn_summary_flux_tumor_immune.csv`
+- `stats/GSM_6433618_step15_gnn_operator_summary_flux_tumor_immune.csv`
 
-**Lie-null validation**
-stats/CSV_GSM/step11_lie_null_summary.csv
+**Curl and hotspot statistics**
+- `stats/GSM_6433618_step15_face_curl_gnn_flux_tumor_immune.csv`
+- `stats/GSM_6433618_step15_hotspot_enrichment_gnn_flux_tumor_immune.csv`
 
-**Region enrichment tests**
-stats/CSV_GSM/step12_region_hotspot_lie_test.csv
+**Hybrid potential decomposition**
+- `stats/GSM_6433618_step17_proxy_hybrid_flux_tumor_immune_summary.csv`
+- `stats/GSM_6433618_step17_gnn_hybrid_flux_tumor_immune_summary.csv`
+
+**Figures**
+- `GSM_visium_figures/GSM_6433618_fig/GSM_6433618_step14_gnn_training_history_flux_tumor_immune.png`
+- `GSM_visium_figures/GSM_6433618_fig/GSM_6433618_step16_transport_equation_figure_flux_tumor_immune.png`
+- `GSM_visium_figures/GSM_6433618_fig/GSM_6433618_Hybrid_potential_decomposition_of_learned_transport_field.png`
 
 
 ---

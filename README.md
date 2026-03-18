@@ -1,54 +1,176 @@
 ### Manuscript version
 
-The code corresponding to the manuscript
+# Non-passive Transport Organization at Tumor–Immune Interfaces
 
-*Operator-Level Transport Phenotyping with PDE-Constrained Hodge–Laplacian Graph Neural Networks*
+This repository accompanies the manuscript:
 
-is archived in the release:
+**“Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis”**
 
-**v1.0-manuscript**
+---
 
-## Repository structure
+## Overview
 
-This repository contains two analysis pipelines.
+Spatial transcriptomics is widely used to study tumor microenvironments, yet most analyses implicitly assume that molecular transport follows passive, diffusion-like behavior.
 
-### scripts_visium/
-Prototype operator diagnostics on Visium spatial transcriptomics data.
+This repository provides a computational framework to **test this assumption directly**.
 
-### scripts_tnbc/
-Full TNBC cohort pipeline including:
-- operator diagnostics
-- curl null tests
-- PDE-constrained GNN training
-- hybrid transport decomposition
+We show that tumor–immune interfaces exhibit **structured rotational transport organization** that cannot be explained by passive, gradient-driven models. These findings suggest that spatial organization at the invasive margin is governed by **interaction-driven biological processes** rather than diffusion alone.
 
-# Hodge_Laplacian_GNN
+---
 
-Discrete Hodge-theoretic analysis of spatial transcriptomics transport structure, with an emphasis on falsifiable diagnostics rather than unconstrained prediction. The repository combines operator construction on spatial graphs, region-aware biological annotation, scalar transport null models, non-gradient wedge fluxes, and Hodge decomposition into exact, coexact, and harmonic components.
+## Core Idea
 
-## What this repository does
+The pipeline implements a **two-stage design**:
 
-This project implements a stepwise pipeline for testing whether passive transport-style explanations are adequate for structured tumor microenvironments. The current worked example uses a public Visium human breast cancer dataset and builds toward region-level tests of rotational transport structure.
+1. **Measurement**  
+   Detect transport structure directly from spatial transcriptomics data using operator-based decomposition:
+   - gradient-driven (exact)
+   - rotational (coexact)
 
-Core outputs include:
-- spatial graph construction from Visium spots
-- marker-based tissue compartment annotation
-- proxy transport residual maps
-- Hodge decomposition of edge fluxes
-- non-gradient wedge fluxes between tumor, stromal, and immune programs
-- region-level enrichment tests with permutation controls
-- manuscript-ready figures and LaTeX tables
+2. **Mechanistic testing**  
+   Evaluate whether the observed structure can be reproduced under **passive transport constraints** using a PDE-constrained graph neural network.
 
-## Current biological use case
+If the model reproduces gradient structure but fails to reproduce rotational structure, this provides a **falsification signal**:
+> the observed spatial organization is incompatible with passive transport assumptions.
 
-The present analysis focuses on a breast tumor tissue section and asks whether coexact, rotationally structured flux signatures are enriched outside tumor core, especially in stromal, invasive-margin-like, and immune-enriched regions. The working logic is:
+---
 
-1. define biologically plausible spatial regions independently from the transport model
-2. build the spatial graph and simplicial operators
-3. test passive scalar transport null models
-4. escalate to non-gradient flux constructions
-5. quantify exact vs coexact energy and local curl structure by region
+## Biological Insight
 
+Across Visium TNBC samples, we observe:
+
+- **Minimal rotational structure** for single-program (tumor / stroma / immune) transport  
+- **Strong rotational enrichment** in interaction-derived (tumor–immune) flux  
+- **Localization of rotational structure at tumor–immune interfaces**
+
+These results indicate that the invasive margin is not a passive boundary, but a **structured interaction zone** driven by competing biological programs.
+
+---
+
+## Minimal Pipeline Overview
+
+### Step 1 — marker scoring  
+`scripts_visium/step1_visium_map.py`
+
+Compute tumor, stromal, and immune scores and map them spatially.
+
+---
+
+### Step 2 — region definition  
+`scripts_visium/step2_define_regions.py`
+
+Define biologically meaningful regions:
+- tumor_core  
+- invasive_margin  
+- stroma  
+- immune_rich  
+
+---
+
+### Step 3 — spatial graph construction  
+`scripts_visium/step3_build_spatial_graph.py`
+
+Construct graph representation and discrete operators:
+- incidence matrices  
+- graph Laplacian  
+
+---
+
+### Step 4–5 — passive transport proxy  
+`scripts_visium/step4_compute_proxy_flux_residuals.py`  
+`scripts_visium/step5_multi_proxy_residuals.py`
+
+Compute diffusion-like fluxes from scalar biological programs.
+
+---
+
+### Step 6 — Hodge decomposition  
+`scripts_visium/step6_hodge_flux_decomposition.py`
+
+Decompose flux into:
+- exact (gradient)  
+- coexact (rotational)  
+- harmonic  
+
+---
+
+### Step 7 — interaction-driven flux  
+`scripts_visium/step7_non_gradient_flux.py`
+
+Construct wedge-based fluxes:
+- tumor–immune  
+- tumor–stroma  
+- immune–stroma  
+
+These are the first signals capable of generating rotational structure.
+
+---
+
+### Step 8 — coexact and curl analysis  
+`scripts_visium/step8_compute_coexact_and_curl.py`
+
+Compute:
+- coexact energy  
+- curl magnitude  
+- region-level statistics  
+- permutation tests  
+
+---
+
+## PDE-Constrained Learning
+
+`scripts_tnbc/step14_tnbc_train_pde_gnn.py`
+
+A graph neural network is trained under:
+- conservation constraints  
+- diffusion-like dynamics  
+
+Result:
+- gradient structure is preserved  
+- rotational structure collapses  
+
+This demonstrates that the observed interface organization is **not reproducible under passive transport assumptions**.
+
+---
+
+## Hybrid Transport Model
+
+`scripts_tnbc/step17_tnbc_solve_hybrid_potentials.py`
+
+We introduce a minimal representation:
+
+- gradient component (global structure)  
+- interaction-driven component (interface dynamics)
+
+This hybrid model captures both aspects of spatial organization.
+
+---
+
+## Main Outputs
+
+Key manuscript figures are generated from:
+
+- `visium_figures/`
+- `GSM_visium_figures/`
+
+Important outputs include:
+- coexact energy maps  
+- curl maps  
+- region-level statistics  
+- GNN training diagnostics  
+- hybrid decomposition  
+
+---
+
+## Reproducibility
+
+The repository includes:
+
+- all analysis scripts  
+- intermediate outputs (`stats/`)  
+- figure generation pipelines  
+
+Raw Visium data should be placed in:
 ## Repository structure
 
 ```text
@@ -76,69 +198,6 @@ Hodge_Laplacian_GNN
 └── reference.bib
 ```
 
-## Minimal pipeline overview
-## Prototype Visium pipeline (`scripts_visium/`)
-
-The following minimal pipeline describes the original Visium operator-diagnostic workflow implemented in `scripts_visium/`.
-
-### Step 1 — marker scoring
-`step1_visium_map.py`
-
-Loads the Visium matrix and spatial coordinates, computes first-pass tumor, stromal, and immune scores, and overlays them on the tissue image.
-
-### Step 2 — region definition
-`step2_define_regions.py`
-
-Builds biologically usable spatial regions from marker programs:
-- tumor_core
-- invasive_margin
-- stroma
-- immune_rich
-- mixed_unassigned
-
-### Step 3 — graph construction
-`step3_build_spatial_graph.py`
-
-Constructs the spot graph and the core operators:
-- node-edge incidence matrix `B1`
-- adjacency matrix
-- graph Laplacian
-
-### Step 4–5 — passive transport null models
-`step4_compute_proxy_flux_residuals.py` and `step5_multi_proxy_residuals.py`
-
-Evaluate diffusion-like proxy fluxes derived from single scalar programs such as tumor, stroma, or immune scores.
-
-### Step 6 — Hodge decomposition of scalar proxy flux
-`step6_hodge_flux_decomposition.py`
-
-Builds triangular 2-cells, constructs `B2`, and decomposes scalar-derived fluxes into:
-- exact
-- coexact
-- harmonic
-
-This step is mainly a sanity check. Scalar-derived fluxes are expected to be mostly exact.
-
-### Step 7 — non-gradient wedge fluxes
-`step7_non_gradient_flux.py`
-
-Constructs antisymmetric non-gradient fluxes, including:
-- immune_tumor_wedge
-- stroma_tumor_wedge
-- immune_stroma_wedge
-
-These are the first fluxes in the pipeline that can generate nontrivial coexact structure.
-
-### Step 8 — coexact energy and curl analysis
-`step8_compute_coexact_and_curl.py`
-
-Computes:
-- node absolute coexact energy
-- node-mapped triangle curl magnitude
-- region-level tests
-- permutation controls
-- combined summary tables
-- manuscript-ready LaTeX exports
 
 ## Main outputs currently emphasized
 

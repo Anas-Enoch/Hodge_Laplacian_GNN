@@ -1,309 +1,608 @@
 from __future__ import annotations
 
 import argparse
+import warnings
 from pathlib import Path
+from typing import Iterable
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import mannwhitneyu
 
 
-REGION_ORDER = [
-    "tumor_enriched",
-    "stroma_enriched",
-    "immune_enriched",
-    "interface_like",
-    "other",
-]
+# ============================================================
+# BUG / CHANGE INVENTORY
+# ============================================================
+#
+# Bug S7-1 (agg_frac > 1.0):
+#   compute_region_summary used sum_total as denominator for agg_frac_*.
+#   Because node_energy_total (omega-derived) can be less than sum_exact
+#   in small regions, agg_frac_exact > 1.0 was possible.
+#   Fix: use sum_component_total = sum_exact + sum_coexact + sum_harmonic.
+#
+# Bug S7-2 (NameError: n_focus, n_ref):
+#   Both referenced in return dicts before being defined.
+#   Fix: define immediately after the zero-fraction guard.
+#
+# Bug S7-3 (TypeError: unexpected keyword argument):
+#   min_nodes_per_region passed by main() but absent from function signature.
+#   Fix: add to signature; implement quality-filter check.
+#
+# Bug S7-4 (KeyError in main):
+#   Early-exit returns missing n_focus and n_ref keys.
+#   Fix: add n_focus=0, n_ref=0 to all early-exit returns.
+#
+# Bug S7-5 (stale comment):
+#   "# ... rest of permutation loop" implied omitted code.
+#   Fix: removed.
+#
+# Change S7-6 (harmonic suppression):
+#   When global E_harmonic / E_coexact < suppress_harmonic_threshold,
+#   the harmonic component is operating at floating-point noise level.
+#   Any nominal significance for node_energy_harmonic in that regime
+#   is a numerical artifact, not a biological signal.
+#   Fix: after building enrich_df, suppress harmonic p-value and annotate
+#   the note field.  Global energies are read from the Step 6 energy
+#   summary CSV when available; otherwise computed from nodes_df sums.
+#   The suppression threshold is exposed as --suppress-harmonic-threshold
+#   (default 1e-6) so it can be adjusted without editing the script.
+# ============================================================
 
 
-def require_file(path: Path) -> Path:
-    if not path.exists():
-        raise FileNotFoundError(f"Required file not found: {path}")
-    return path
+# ============================================================
+# Helpers
+# ============================================================
+
+def require_cols(df: pd.DataFrame, cols: Iterable[str], df_name: str) -> None:
+    missing = [c for c in cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns in {df_name}: {missing}")
 
 
-def safe_mean(x: np.ndarray) -> float:
-    if len(x) == 0:
+def sanitize_flux_name(flux_name: str) -> str:
+    return flux_name.replace("/", "_").replace(" ", "_")
+
+
+def safe_mean(x: pd.Series) -> float:
+    arr = x.to_numpy(dtype=float)
+    if len(arr) == 0:
         return np.nan
-    return float(np.mean(x))
+    return float(np.nanmean(arr))
 
 
-def safe_median(x: np.ndarray) -> float:
-    if len(x) == 0:
+def safe_median(x: pd.Series) -> float:
+    arr = x.to_numpy(dtype=float)
+    if len(arr) == 0:
         return np.nan
-    return float(np.median(x))
+    return float(np.nanmedian(arr))
 
 
-def safe_std(x: np.ndarray) -> float:
-    if len(x) == 0:
-        return np.nan
-    return float(np.std(x))
+def choose_default_reference_region(regions: list[str]) -> str | None:
+    preferences = ["tumor_enriched", "tumor_core", "other"]
+    for r in preferences:
+        if r in regions:
+            return r
+    return regions[0] if regions else None
 
 
-def compute_enrichment(a: np.ndarray, b: np.ndarray, eps: float = 1e-18) -> float:
-    return safe_median(a) / max(safe_median(b), eps)
+# ============================================================
+# Region summary
+# ============================================================
 
-
-def permutation_pvalue(
-    x: np.ndarray,
-    y: np.ndarray,
-    *,
-    n_perm: int = 1000,
-    alternative: str = "greater",
-    seed: int = 0,
-) -> tuple[float, float]:
+def compute_region_summary(
+    nodes_df: pd.DataFrame,
+    region_col: str = "region_step2",
+) -> pd.DataFrame:
     """
-    Permutation p-value for difference in medians.
-    Returns:
-      observed_stat, p_value
-    where observed_stat = median(x) - median(y)
+    Region-level summaries of node energies and fractions.
+
+    agg_frac_* use the component sum (exact + coexact + harmonic) as
+    denominator, guaranteeing values in [0, 1] regardless of whether
+    node_energy_total was computed from omega or from components upstream.
+
+    sum_total is reported for reference only and NOT used as a denominator.
     """
-    rng = np.random.default_rng(seed)
+    required = [
+        region_col,
+        "node_energy_total",
+        "node_energy_exact",
+        "node_energy_coexact",
+        "node_energy_harmonic",
+    ]
+    require_cols(nodes_df, required, "nodes_df")
 
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
+    rows = []
+    for region, sub in nodes_df.groupby(region_col, dropna=False):
+        E_total    = sub["node_energy_total"].to_numpy(dtype=float)
+        E_exact    = sub["node_energy_exact"].to_numpy(dtype=float)
+        E_coexact  = sub["node_energy_coexact"].to_numpy(dtype=float)
+        E_harmonic = sub["node_energy_harmonic"].to_numpy(dtype=float)
 
-    pooled = np.concatenate([x, y])
-    n_x = len(x)
+        sum_total    = float(np.nansum(E_total))
+        sum_exact    = float(np.nansum(E_exact))
+        sum_coexact  = float(np.nansum(E_coexact))
+        sum_harmonic = float(np.nansum(E_harmonic))
 
-    obs = np.median(x) - np.median(y)
+        # FIX S7-1: component sum — always >= each numerator
+        sum_component_total = sum_exact + sum_coexact + sum_harmonic
 
-    perm_stats = np.empty(n_perm, dtype=float)
-    for k in range(n_perm):
-        perm = rng.permutation(len(pooled))
-        px = pooled[perm[:n_x]]
-        py = pooled[perm[n_x:]]
-        perm_stats[k] = np.median(px) - np.median(py)
+        if sum_component_total > 1e-12:
+            agg_frac_exact    = sum_exact    / sum_component_total
+            agg_frac_coexact  = sum_coexact  / sum_component_total
+            agg_frac_harmonic = sum_harmonic / sum_component_total
+        else:
+            agg_frac_exact = agg_frac_coexact = agg_frac_harmonic = np.nan
 
-    if alternative == "greater":
-        p = (1.0 + np.sum(perm_stats >= obs)) / (n_perm + 1.0)
-    elif alternative == "less":
-        p = (1.0 + np.sum(perm_stats <= obs)) / (n_perm + 1.0)
-    else:
-        p = (1.0 + np.sum(np.abs(perm_stats) >= abs(obs))) / (n_perm + 1.0)
+        # Validate bounds — should always pass after the fix above
+        for label, val in [
+            ("agg_frac_exact",    agg_frac_exact),
+            ("agg_frac_coexact",  agg_frac_coexact),
+            ("agg_frac_harmonic", agg_frac_harmonic),
+        ]:
+            if np.isfinite(val) and (val < -1e-6 or val > 1.0 + 1e-6):
+                warnings.warn(
+                    f"Region '{region}': {label} = {val:.6f} outside [0, 1] "
+                    f"even after component-sum fix. "
+                    f"sum_exact={sum_exact:.3e}, "
+                    f"sum_component_total={sum_component_total:.3e}. "
+                    "Investigate Step 6 projection quality."
+                )
 
-    return float(obs), float(p)
+        # Per-node fractions using component-sum denominator
+        node_component_total = E_exact + E_coexact + E_harmonic
+        valid = node_component_total > 1e-12
+        if int(valid.sum()) > 0:
+            denom_v = node_component_total[valid]
+            mean_node_frac_exact    = float(np.nanmean(E_exact[valid]    / denom_v))
+            mean_node_frac_coexact  = float(np.nanmean(E_coexact[valid]  / denom_v))
+            mean_node_frac_harmonic = float(np.nanmean(E_harmonic[valid] / denom_v))
+        else:
+            mean_node_frac_exact = mean_node_frac_coexact = mean_node_frac_harmonic = np.nan
+
+        rows.append({
+            "region":               region,
+            "n_nodes":              int(len(sub)),
+            "n_nodes_valid":        int(valid.sum()),
+            "sum_total":            sum_total,
+            "sum_component_total":  sum_component_total,
+            "sum_exact":            sum_exact,
+            "sum_coexact":          sum_coexact,
+            "sum_harmonic":         sum_harmonic,
+            "agg_frac_exact":       agg_frac_exact,
+            "agg_frac_coexact":     agg_frac_coexact,
+            "agg_frac_harmonic":    agg_frac_harmonic,
+            "mean_node_frac_exact":    mean_node_frac_exact,
+            "mean_node_frac_coexact":  mean_node_frac_coexact,
+            "mean_node_frac_harmonic": mean_node_frac_harmonic,
+            "mean_total":    safe_mean(sub["node_energy_total"]),
+            "mean_exact":    safe_mean(sub["node_energy_exact"]),
+            "mean_coexact":  safe_mean(sub["node_energy_coexact"]),
+            "mean_harmonic": safe_mean(sub["node_energy_harmonic"]),
+            "median_total":    safe_median(sub["node_energy_total"]),
+            "median_exact":    safe_median(sub["node_energy_exact"]),
+            "median_coexact":  safe_median(sub["node_energy_coexact"]),
+            "median_harmonic": safe_median(sub["node_energy_harmonic"]),
+        })
+
+    return pd.DataFrame(rows).sort_values("region").reset_index(drop=True)
 
 
-def mwu_pvalue(x: np.ndarray, y: np.ndarray, alternative: str = "greater") -> tuple[float, float]:
-    if len(x) == 0 or len(y) == 0:
-        return np.nan, np.nan
-    stat, p = mannwhitneyu(x, y, alternative=alternative)
-    return float(stat), float(p)
+# ============================================================
+# Enrichment ratio
+# ============================================================
+
+def enrichment_ratio(
+    nodes_df: pd.DataFrame,
+    numerator_region: str,
+    denominator_region: str,
+    value_col: str,
+    region_col: str = "region_step2",
+) -> float:
+    """
+    Mean(value_col | numerator) / Mean(value_col | denominator).
+    Returns NaN if either mean is non-finite or denominator mean is zero.
+    """
+    require_cols(nodes_df, [region_col, value_col], "nodes_df")
+
+    num = nodes_df.loc[nodes_df[region_col] == numerator_region,   value_col]
+    den = nodes_df.loc[nodes_df[region_col] == denominator_region, value_col]
+
+    num_mean = safe_mean(num)
+    den_mean = safe_mean(den)
+
+    if not np.isfinite(num_mean) or not np.isfinite(den_mean) or den_mean == 0:
+        return np.nan
+    return float(num_mean / den_mean)
 
 
-def region_pair_tests(
-    df: pd.DataFrame,
-    metric_col: str,
-    region_a: str,
-    region_b: str,
-    *,
+# ============================================================
+# Permutation enrichment test
+# ============================================================
+
+def permutation_enrichment_test(
+    nodes_df: pd.DataFrame,
+    numerator_region: str,
+    denominator_region: str,
+    value_col: str,
+    region_col: str = "region_step2",
     n_perm: int = 1000,
-    seed: int = 0,
-    alternative: str = "greater",
+    seed: int = 42,
+    zero_fraction_threshold: float = 0.95,
+    min_nodes_per_region: int = 10,
 ) -> dict:
-    xa = df.loc[df["region_step2"] == region_a, metric_col].to_numpy(dtype=float)
-    xb = df.loc[df["region_step2"] == region_b, metric_col].to_numpy(dtype=float)
+    """
+    Permutation enrichment test for a scalar node metric between two regions.
 
-    mwu_stat, mwu_p = mwu_pvalue(xa, xb, alternative=alternative)
-    obs_diff, perm_p = permutation_pvalue(
-        xa, xb, n_perm=n_perm, alternative=alternative, seed=seed
+    Parameters
+    ----------
+    zero_fraction_threshold : float
+        Fraction of exactly-zero values above which the metric is treated as
+        structurally degenerate.  Uses exact zeros (not np.allclose) so that
+        small-but-nonzero energy scales are handled correctly.
+    min_nodes_per_region : int
+        Minimum nodes required in both focus and reference regions.
+        Samples below this threshold are excluded (note = low_sample_size)
+        but retained for global Hodge analysis.
+    """
+    require_cols(nodes_df, [region_col, value_col], "nodes_df")
+
+    work = nodes_df[[region_col, value_col]].dropna().copy()
+
+    # Guard: empty dataframe
+    if len(work) == 0:
+        return {
+            "observed_ratio":   np.nan,
+            "perm_p_two_sided": np.nan,
+            "null_mean":        np.nan,
+            "null_std":         np.nan,
+            "n_focus":          0,
+            "n_ref":            0,
+            "note":             "insufficient_data",
+        }
+
+    vals = work[value_col].to_numpy(dtype=float)
+
+    # Guard: degenerate metric (fraction-based, not np.allclose)
+    n_zero = int(np.sum(vals == 0.0))
+    zero_fraction = n_zero / len(vals)
+    if zero_fraction >= zero_fraction_threshold:
+        return {
+            "observed_ratio":   np.nan,
+            "perm_p_two_sided": np.nan,
+            "null_mean":        np.nan,
+            "null_std":         np.nan,
+            "n_focus":          0,
+            "n_ref":            0,
+            "note":             f"all_zero_metric (zero_fraction={zero_fraction:.3f})",
+        }
+
+    # FIX S7-2: define before any return that references them
+    n_focus = int((work[region_col] == numerator_region).sum())
+    n_ref   = int((work[region_col] == denominator_region).sum())
+
+    # FIX S7-3: quality filter
+    if n_focus < min_nodes_per_region or n_ref < min_nodes_per_region:
+        return {
+            "observed_ratio":   np.nan,
+            "perm_p_two_sided": np.nan,
+            "null_mean":        np.nan,
+            "null_std":         np.nan,
+            "n_focus":          n_focus,
+            "n_ref":            n_ref,
+            "note": (
+                f"low_sample_size "
+                f"(focus={n_focus}, ref={n_ref}, min={min_nodes_per_region})"
+            ),
+        }
+
+    obs = enrichment_ratio(
+        work,
+        numerator_region=numerator_region,
+        denominator_region=denominator_region,
+        value_col=value_col,
+        region_col=region_col,
     )
 
+    labels = work[region_col].to_numpy(copy=True)
+    values = vals.copy()
+    rng = np.random.default_rng(seed)
+    null_vals: list[float] = []
+
+    for _ in range(n_perm):
+        shuffled = labels.copy()
+        rng.shuffle(shuffled)
+        perm_df = pd.DataFrame({region_col: shuffled, value_col: values})
+        r = enrichment_ratio(
+            perm_df,
+            numerator_region=numerator_region,
+            denominator_region=denominator_region,
+            value_col=value_col,
+            region_col=region_col,
+        )
+        if np.isfinite(r):
+            null_vals.append(r)
+
+    if len(null_vals) == 0 or not np.isfinite(obs):
+        return {
+            "observed_ratio":   float(obs) if np.isfinite(obs) else np.nan,
+            "perm_p_two_sided": np.nan,
+            "null_mean":        np.nan,
+            "null_std":         np.nan,
+            "n_focus":          n_focus,
+            "n_ref":            n_ref,
+            "note":             "null_failed",
+        }
+
+    null_arr = np.asarray(null_vals, dtype=float)
+    p_two = (
+        np.sum(np.abs(null_arr - 1.0) >= abs(obs - 1.0)) + 1
+    ) / (len(null_arr) + 1)
+
     return {
-        "metric": metric_col,
-        "region_a": region_a,
-        "region_b": region_b,
-        "n_a": len(xa),
-        "n_b": len(xb),
-        "mean_a": safe_mean(xa),
-        "mean_b": safe_mean(xb),
-        "median_a": safe_median(xa),
-        "median_b": safe_median(xb),
-        "std_a": safe_std(xa),
-        "std_b": safe_std(xb),
-        "median_diff_a_minus_b": obs_diff,
-        "median_ratio_a_over_b": compute_enrichment(xa, xb),
-        "mwu_stat": mwu_stat,
-        "mwu_p": mwu_p,
-        "perm_p": perm_p,
+        "observed_ratio":   float(obs),
+        "perm_p_two_sided": float(p_two),
+        "null_mean":        float(np.nanmean(null_arr)),
+        "null_std":         float(np.nanstd(null_arr)),
+        "n_focus":          n_focus,
+        "n_ref":            n_ref,
+        "note":             "ok",
     }
 
 
-def save_metric_maps(
-    df: pd.DataFrame,
-    sample_id: str,
-    flux_name: str,
-    outpath: Path,
-) -> None:
-    x = df["x_fullres"].to_numpy(dtype=float)
-    y = df["y_fullres"].to_numpy(dtype=float)
+# ============================================================
+# Change S7-6: Harmonic suppression
+# ============================================================
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
+def get_global_energies(
+    nodes_df: pd.DataFrame,
+    step6_summary_file: Path | None,
+) -> tuple[float, float]:
+    """
+    Return (E_harmonic_global, E_coexact_global).
 
-    panels = [
-        ("node_energy_coexact", "Absolute coexact energy"),
-        ("frac_coexact", "Coexact fraction"),
-    ]
+    Preference order:
+    1. Step 6 energy summary CSV — uses the exact global L2 norms from the
+       Hodge decomposition (E_coexact = ||omega_coexact||^2).
+    2. Sum of node_energy_* columns — approximate but consistent direction.
+       Used as fallback when the Step 6 summary is unavailable.
+    """
+    if step6_summary_file is not None and step6_summary_file.exists():
+        try:
+            summary = pd.read_csv(step6_summary_file)
+            if "E_harmonic" in summary.columns and "E_coexact" in summary.columns:
+                E_harm = float(summary["E_harmonic"].iloc[0])
+                E_coex = float(summary["E_coexact"].iloc[0])
+                print(
+                    f"Harmonic suppression: loaded global energies from "
+                    f"{step6_summary_file.name} "
+                    f"(E_harmonic={E_harm:.3e}, E_coexact={E_coex:.3e})"
+                )
+                return E_harm, E_coex
+            else:
+                print(
+                    f"Harmonic suppression: Step 6 summary found but missing "
+                    f"E_harmonic / E_coexact columns — falling back to nodes_df sums."
+                )
+        except Exception as exc:
+            print(
+                f"Harmonic suppression: could not read {step6_summary_file}: "
+                f"{exc} — falling back to nodes_df sums."
+            )
 
-    for ax, (col, title) in zip(axes, panels):
-        sca = ax.scatter(
-            x,
-            y,
-            c=df[col].to_numpy(dtype=float),
-            s=15,
-            alpha=0.90,
+    # Fallback: sum of per-node mean squared energies
+    E_harm = float(nodes_df["node_energy_harmonic"].sum())
+    E_coex = float(nodes_df["node_energy_coexact"].sum())
+    print(
+        f"Harmonic suppression: using nodes_df sums "
+        f"(E_harmonic≈{E_harm:.3e}, E_coexact≈{E_coex:.3e})"
+    )
+    return E_harm, E_coex
+
+
+def suppress_harmonic_if_negligible(
+    enrich_df: pd.DataFrame,
+    E_harmonic_global: float,
+    E_coexact_global: float,
+    threshold: float = 1e-6,
+) -> pd.DataFrame:
+    """
+    Suppress harmonic enrichment significance when the global harmonic energy
+    is negligible relative to global coexact energy.
+
+    When E_harmonic / E_coexact < threshold, the harmonic component is at
+    floating-point noise level.  Any nominal p-value for node_energy_harmonic
+    in that regime reflects numerical artifacts of the lsqr projection, not
+    biology.  The p-value is set to NaN and the note field is annotated.
+
+    A new boolean column 'harmonic_suppressed' is added to make downstream
+    filtering explicit.
+
+    Parameters
+    ----------
+    threshold : float
+        Ratio E_harmonic / E_coexact below which harmonic significance is
+        suppressed.  Default 1e-6 — ten orders of magnitude separation.
+    """
+    enrich_df = enrich_df.copy()
+
+    # Add column — default False
+    enrich_df["harmonic_suppressed"] = False
+
+    if E_coexact_global <= 0:
+        return enrich_df
+
+    harmonic_fraction = E_harmonic_global / E_coexact_global
+
+    if harmonic_fraction < threshold:
+        mask = enrich_df["metric"] == "node_energy_harmonic"
+
+        enrich_df.loc[mask, "perm_p_two_sided"] = np.nan
+        enrich_df.loc[mask, "harmonic_suppressed"] = True
+        enrich_df.loc[mask, "note"] = enrich_df.loc[mask, "note"].apply(
+            lambda n: (
+                n + f" [harmonic suppressed: "
+                f"E_harm/E_coexact={harmonic_fraction:.2e} < {threshold:.0e}]"
+            )
         )
-        ax.set_title(title)
-        ax.invert_yaxis()
-        ax.axis("off")
-        plt.colorbar(sca, ax=ax, fraction=0.04, pad=0.02)
+        print(
+            f"Harmonic suppression applied: "
+            f"E_harmonic/E_coexact = {harmonic_fraction:.2e} < {threshold:.0e}. "
+            f"node_energy_harmonic p-value set to NaN."
+        )
+    else:
+        print(
+            f"Harmonic suppression NOT applied: "
+            f"E_harmonic/E_coexact = {harmonic_fraction:.2e} >= {threshold:.0e}."
+        )
 
-    plt.suptitle(f"{sample_id}: Step 7 coexact enrichment maps — {flux_name}", y=0.98)
-    plt.tight_layout()
-    plt.savefig(outpath, dpi=220)
-    plt.close(fig)
+    return enrich_df
 
 
-def save_region_boxplots(
-    df: pd.DataFrame,
-    sample_id: str,
-    flux_name: str,
-    outpath: Path,
-) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
-
-    specs = [
-        ("node_energy_coexact", "Absolute coexact energy by region"),
-        ("frac_coexact", "Coexact fraction by region"),
-    ]
-
-    for ax, (col, title) in zip(axes, specs):
-        data = [
-            df.loc[df["region_step2"] == reg, col].to_numpy(dtype=float)
-            for reg in REGION_ORDER
-        ]
-        ax.boxplot(data, tick_labels=REGION_ORDER, showfliers=False)
-        ax.set_title(title)
-        ax.tick_params(axis="x", rotation=30)
-
-    plt.suptitle(f"{sample_id}: Step 7 region tests — {flux_name}", y=0.98)
-    plt.tight_layout()
-    plt.savefig(outpath, dpi=220)
-    plt.close(fig)
-
+# ============================================================
+# Main
+# ============================================================
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Step 7 TNBC: statistical enrichment testing for coexact energy."
+        description="TNBC Step 7: region enrichment from node-level Hodge summaries."
     )
-    parser.add_argument("--sample_id", required=True)
+    parser.add_argument("--sample-id", default="GSM_6433618")
     parser.add_argument(
-        "--flux_name",
-        required=True,
-        choices=["flux_tumor_immune", "flux_tumor_stroma", "flux_immune_stroma"],
+        "--flux-col", default="flux_tumor_immune",
+        help="Flux tag from Step 6, e.g. flux_tumor_immune_region_interface_weighted",
     )
-    parser.add_argument("--statsdir", default="stats")
-    parser.add_argument("--figdir", default="visium_figures")
-    parser.add_argument("--n_perm", type=int, default=1000)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--stats-dir", default="stats/CSV_GSM")
+    parser.add_argument("--region-col", default="region_step2")
+    parser.add_argument(
+        "--focus-region", default="interface_like",
+        help="Numerator region for enrichment ratio",
+    )
+    parser.add_argument(
+        "--reference-region", default=None,
+        help="Denominator region. Auto-selected from [tumor_enriched, tumor_core, other].",
+    )
+    parser.add_argument("--n-perm", type=int, default=1000)
+    parser.add_argument(
+        "--min-nodes-per-region", type=int, default=10,
+        help=(
+            "Minimum nodes in both focus and reference regions. "
+            "Samples below threshold are excluded from enrichment analysis "
+            "(note = low_sample_size) but retained for global Hodge statistics."
+        ),
+    )
+    # Change S7-6
+    parser.add_argument(
+        "--suppress-harmonic-threshold", type=float, default=1e-6,
+        help=(
+            "Suppress harmonic enrichment p-value when "
+            "E_harmonic_global / E_coexact_global < this value. "
+            "Values below this ratio indicate the harmonic component is at "
+            "floating-point noise level and any significance is artifactual. "
+            "Default: 1e-6. Set to 0.0 to disable suppression entirely."
+        ),
+    )
     args = parser.parse_args()
 
-    sample_id = args.sample_id
-    flux_name = args.flux_name
-    statsdir = Path(args.statsdir)
-    figdir = Path(args.figdir)
-    figdir.mkdir(parents=True, exist_ok=True)
+    sample_id  = args.sample_id
+    flux_col   = args.flux_col
+    flux_tag   = sanitize_flux_name(flux_col)
+    stats_dir  = Path(args.stats_dir)
 
-    node_file = require_file(statsdir / f"{sample_id}_step6_nodes_hodge_{flux_name}.csv")
-    df = pd.read_csv(node_file)
+    nodes_file = stats_dir / f"{sample_id}_step6_nodes_hodge_{flux_tag}.csv"
+    nodes_df   = pd.read_csv(nodes_file)
 
-    print("=" * 72)
-    print(f"STEP 7: TNBC region enrichment tests for {sample_id}")
-    print("=" * 72)
-    print(f"Input node file : {node_file}")
-    print(f"Flux            : {flux_name}")
-    print(f"n_perm          : {args.n_perm}")
-    print(f"seed            : {args.seed}")
+    require_cols(
+        nodes_df,
+        [
+            "node_id",
+            args.region_col,
+            "node_energy_total",
+            "node_energy_exact",
+            "node_energy_coexact",
+            "node_energy_harmonic",
+        ],
+        "nodes_df",
+    )
 
-    # Primary comparisons: immune/interface against tumor/stroma/other
-    tests = []
+    # ---- Region summary (always computed, no size filter) ----
+    region_summary = compute_region_summary(nodes_df, region_col=args.region_col)
 
-    primary_pairs = [
-        ("immune_enriched", "tumor_enriched"),
-        ("immune_enriched", "stroma_enriched"),
-        ("immune_enriched", "other"),
-        ("interface_like", "tumor_enriched"),
-        ("interface_like", "stroma_enriched"),
-        ("interface_like", "other"),
+    # ---- Reference region ----
+    regions = nodes_df[args.region_col].dropna().astype(str).unique().tolist()
+    reference_region = args.reference_region or choose_default_reference_region(regions)
+    if reference_region is None:
+        raise ValueError("Could not determine a reference region.")
+
+    # ---- Enrichment tests ----
+    metrics = [
+        "node_energy_exact",
+        "node_energy_coexact",
+        "node_energy_harmonic",
+        "node_energy_total",
     ]
 
-    for metric in ["node_energy_coexact", "frac_coexact"]:
-        for ra, rb in primary_pairs:
-            tests.append(
-                region_pair_tests(
-                    df,
-                    metric,
-                    ra,
-                    rb,
-                    n_perm=args.n_perm,
-                    seed=args.seed,
-                    alternative="greater",
-                )
-            )
+    rows = []
+    for metric in metrics:
+        test_out = permutation_enrichment_test(
+            nodes_df,
+            numerator_region=args.focus_region,
+            denominator_region=reference_region,
+            value_col=metric,
+            region_col=args.region_col,
+            n_perm=args.n_perm,
+            min_nodes_per_region=args.min_nodes_per_region,
+        )
 
-    tests_df = pd.DataFrame(tests)
-    tests_out = statsdir / f"{sample_id}_step7_region_tests_{flux_name}.csv"
-    tests_df.to_csv(tests_out, index=False)
+        rows.append({
+            "sample_id":        sample_id,
+            "target_flux":      flux_col,
+            "focus_region":     args.focus_region,
+            "reference_region": reference_region,
+            "metric":           metric,
+            "observed_ratio":   test_out["observed_ratio"],
+            "perm_p_two_sided": test_out["perm_p_two_sided"],
+            "null_mean":        test_out["null_mean"],
+            "null_std":         test_out["null_std"],
+            "n_focus":          test_out["n_focus"],
+            "n_ref":            test_out["n_ref"],
+            "note":             test_out["note"],
+        })
 
-    print("\nPrimary test summary")
-    print("-" * 72)
-    print(tests_df[["metric", "region_a", "region_b", "median_ratio_a_over_b", "mwu_p", "perm_p"]])
+    enrich_df = pd.DataFrame(rows)
 
-    # Region summary table
-    region_summary = (
-        df.groupby("region_step2")[
-            ["node_energy_total", "node_energy_exact", "node_energy_coexact", "node_energy_harmonic", "frac_exact", "frac_coexact", "frac_harmonic"]
-        ]
-        .agg(["mean", "median", "std", "count"])
-    )
-    region_summary_out = statsdir / f"{sample_id}_step7_region_summary_{flux_name}.csv"
-    region_summary.to_csv(region_summary_out)
+    # ---- Change S7-6: harmonic suppression ----
+    if args.suppress_harmonic_threshold > 0.0:
+        # Try to load Step 6 energy summary for precise global energies
+        step6_summary_file = (
+            stats_dir / f"{sample_id}_step6_energy_summary_{flux_tag}.csv"
+        )
+        E_harm_global, E_coex_global = get_global_energies(
+            nodes_df, step6_summary_file
+        )
+        enrich_df = suppress_harmonic_if_negligible(
+            enrich_df,
+            E_harmonic_global=E_harm_global,
+            E_coexact_global=E_coex_global,
+            threshold=args.suppress_harmonic_threshold,
+        )
+    else:
+        enrich_df["harmonic_suppressed"] = False
+        print("Harmonic suppression disabled (--suppress-harmonic-threshold=0.0).")
 
-    # Compact energy fractions across all nodes
-    global_summary = pd.DataFrame(
-        [
-            {
-                "sample_id": sample_id,
-                "flux_name": flux_name,
-                "mean_total_energy": float(df["node_energy_total"].mean()),
-                "mean_exact_energy": float(df["node_energy_exact"].mean()),
-                "mean_coexact_energy": float(df["node_energy_coexact"].mean()),
-                "mean_harmonic_energy": float(df["node_energy_harmonic"].mean()),
-                "mean_frac_exact": float(df["frac_exact"].mean()),
-                "mean_frac_coexact": float(df["frac_coexact"].mean()),
-                "mean_frac_harmonic": float(df["frac_harmonic"].mean()),
-            }
-        ]
-    )
-    global_out = statsdir / f"{sample_id}_step7_global_summary_{flux_name}.csv"
-    global_summary.to_csv(global_out, index=False)
+    # ---- Save ----
+    out_region = stats_dir / f"{sample_id}_step7_region_summary_{flux_tag}.csv"
+    out_enrich = stats_dir / f"{sample_id}_step7_region_enrichment_{flux_tag}.csv"
 
-    # Figures
-    maps_png = figdir / f"{sample_id}_step7_coexact_maps_{flux_name}.png"
-    save_metric_maps(df, sample_id, flux_name, maps_png)
+    region_summary.to_csv(out_region, index=False)
+    enrich_df.to_csv(out_enrich,      index=False)
 
-    boxplots_png = figdir / f"{sample_id}_step7_coexact_boxplots_{flux_name}.png"
-    save_region_boxplots(df, sample_id, flux_name, boxplots_png)
+    print(f"\nSaved region summary   -> {out_region}")
+    print(f"Saved enrichment tests -> {out_enrich}")
 
-    print(f"\nSaved: {tests_out}")
-    print(f"Saved: {region_summary_out}")
-    print(f"Saved: {global_out}")
-    print(f"Saved: {maps_png}")
-    print(f"Saved: {boxplots_png}")
-    print("\nStep 7 completed successfully.")
+    print("\nRegion summary:")
+    print(region_summary.to_string(index=False))
+
+    print("\nEnrichment tests:")
+    print(enrich_df.to_string(index=False))
 
 
 if __name__ == "__main__":

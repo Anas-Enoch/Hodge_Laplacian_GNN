@@ -154,8 +154,18 @@ The script computes five statistics in sequence:
 4. **Within-interface analysis** — interface-like nodes only; tests biological variation inside the active boundary zone
 5. **FDR correction** — BH correction applied separately to global and subset analyses
 
-Key finding (GSM_6433618 and GSM_6433619): within interface-like nodes, coexact energy is significantly associated with both tumor and immune residual variation, while stromal residual shows no comparable association. This pattern supports interpretation of the coexact component as a marker of local tumor–immune contrast, not a dedicated immune infiltration readout.
+## Example pattern:
 
+while read sid; do
+  python scripts_tnbc/step19_generate_csv.py --sample-id "$sid"
+done < valid_sample_ids.txt
+
+while read sid; do
+  python -m scripts_tnbc.step19_coexact_bio_correlation \
+    --mode sample \
+    --sample-id "$sid" \
+    --flux-tag flux_tumor_immune_region_interface_weighted
+done < valid_sample_ids.txt
 ---
 
 ## Exclusion Criterion

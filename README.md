@@ -1,371 +1,275 @@
-### Manuscript version
-
 # Non-passive Transport Organization at Tumor–Immune Interfaces
 
-This repository accompanies the manuscript:
-
-**“Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis”**
+**"Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis"**  
+Anas Enoch, MD · Mohammed VI University of Health Sciences (UM6SS), Casablanca  
+Target journal: *Bioinformatics Advances* (Oxford) · Submission BIOINF-2026-0777
 
 ---
 
 ## Overview
 
-Spatial transcriptomics is widely used to study tumor microenvironments, yet most analyses implicitly assume that molecular transport follows passive, diffusion-like behavior.
+Spatial transcriptomics is widely used to study tumor microenvironments, yet most analyses implicitly assume that molecular transport follows passive, diffusion-like behavior. This repository provides a computational framework to **test this assumption directly** using operator-level Hodge–Laplacian decomposition and PDE-constrained graph neural networks.
 
-This repository provides a computational framework to **test this assumption directly**.
-
-We show that tumor–immune interfaces exhibit **structured rotational transport organization** that cannot be explained by passive, gradient-driven models. These findings suggest that spatial organization at the invasive margin is governed by **interaction-driven biological processes** rather than diffusion alone.
+Applied to **GSE210616** — 43 Visium sections from 22 primary TNBC patients — we show that tumor–immune interfaces consistently exhibit **structured rotational transport organization** that cannot be reproduced by any gradient-only passive transport model. A subsequent stochastic Hodge framework provides Bayesian evidence quantifying both the presence and interface-localisation of this non-gradient structure.
 
 ---
 
-## Core Idea
+## Core Scientific Claim
 
-The pipeline implements a **two-stage design**:
+Across the TNBC cohort (40 valid sections for enrichment, 19 for stochastic analysis):
 
-1. **Measurement**  
-   Detect transport structure directly from spatial transcriptomics data using operator-based decomposition:
-   - gradient-driven (exact)
-   - rotational (coexact)
+| Result | Value | N | Sign test *p* |
+|--------|-------|---|---------------|
+| Coexact enrichment > 1.0 at tumor–immune interfaces | 40/40 sections | 40 | < 10⁻¹² |
+| Coexact/exact differential > 1.0 (median 2.54) | 38/40 sections | 40 | < 10⁻⁹ |
+| NCG: ρ(NC, coexact) at interface = 0.832 median | 18/18 sections | 18 | < 10⁻⁵ |
+| Zeta: Z(s=1) = 1.89, f_low = 0.653 | 19/19 sections | 19 | < 10⁻⁵ |
+| Biomarker validation: cytotoxic/CD8 enrichment | 14–15/19 | 19 | < 0.04 |
+| log B(M1a/M0): non-gradient structure present | 19/19 sections | 19 | < 10⁻⁵ |
+| log B(M1b/M1a): interface-localised (median +517.6) | 19/19 sections | 19 | < 10⁻⁵ |
+| GNN falsification: coexact collapses to 2.7×10⁻¹² | — | — | — |
 
-2. **Mechanistic testing**  
-   Evaluate whether the observed structure can be reproduced under **passive transport constraints** using a PDE-constrained graph neural network.
-
-If the model reproduces gradient structure but fails to reproduce rotational structure, this provides a **falsification signal**:
-> the observed spatial organization is incompatible with passive transport assumptions.
-
----
-
-## Biological Insight
-
-Across Visium TNBC samples, we observe:
-
-- **Minimal rotational structure** for single-program (tumor / stroma / immune) transport  
-- **Strong rotational enrichment** in interaction-derived (tumor–immune) flux  
-- **Localization of rotational structure at tumor–immune interfaces**
-
-These results indicate that the invasive margin is not a passive boundary, but a **structured interaction zone** driven by competing biological programs.
+Finding is independent of race, neoadjuvant chemotherapy, age, and RFS (all *p* > 0.18, *n* = 22 patients).
 
 ---
 
-## Minimal Pipeline Overview
+## Design Principle
 
-### Step 1 — marker scoring  
-`scripts_visium/step1_visium_map.py`
+The pipeline implements a **three-stage falsification design**:
 
-Compute tumor, stromal, and immune scores and map them spatially.
+1. **Geometric detection** — Hodge decomposition of proxy transport fields into exact (gradient), coexact (rotational), and harmonic components. Enrichment of the coexact component at annotated tumor–immune interfaces is the primary geometric signal.
 
----
+2. **Operator-class falsification** — A PDE-constrained Hodge–Laplacian GNN is trained to fit the observed flux field under conservation constraints. If the model reproduces the exact component but the coexact component collapses, this is a **falsification signal**: the observed spatial organization is incompatible with the passive transport class.
 
-### Step 2 — region definition  
-`scripts_visium/step2_define_regions.py`
+3. **Probabilistic quantification** — A stochastic Hodge decomposition places Gaussian priors over the flux field and computes analytic Bayes factors comparing passive (M0), uniform active (M1a), and interface-localised active (M1b) model classes.
 
-Define biologically meaningful regions:
-- tumor_core  
-- invasive_margin  
-- stroma  
-- immune_rich  
+> The GNN is not a predictor of biology — it is the best possible passive transport explanation.  
+> Collapse of the coexact component under conservation-constrained learning is falsification, not fitting failure.
 
 ---
 
-### Step 3 — spatial graph construction  
-`scripts_visium/step3_build_spatial_graph.py`
+## Repository Structure
 
-Construct graph representation and discrete operators:
-- incidence matrices  
-- graph Laplacian  
-
----
-
-### Step 4–5 — passive transport proxy  
-`scripts_visium/step4_compute_proxy_flux_residuals.py`  
-`scripts_visium/step5_multi_proxy_residuals.py`
-
-Compute diffusion-like fluxes from scalar biological programs.
-
----
-
-### Step 6 — Hodge decomposition  
-`scripts_visium/step6_hodge_flux_decomposition.py`
-
-Decompose flux into:
-- exact (gradient)  
-- coexact (rotational)  
-- harmonic  
-
----
-
-### Step 7 — interaction-driven flux  
-`scripts_visium/step7_non_gradient_flux.py`
-
-Construct wedge-based fluxes:
-- tumor–immune  
-- tumor–stroma  
-- immune–stroma  
-
-These are the first signals capable of generating rotational structure.
-
----
-
-### Step 8 — coexact and curl analysis  
-`scripts_visium/step8_compute_coexact_and_curl.py`
-
-Compute:
-- coexact energy  
-- curl magnitude  
-- region-level statistics  
-- permutation tests  
-
----
-
-## PDE-Constrained Learning
-
-`scripts_tnbc/step14_tnbc_train_pde_gnn.py`
-
-A graph neural network is trained under:
-- conservation constraints  
-- diffusion-like dynamics  
-
-Result:
-- gradient structure is preserved  
-- rotational structure collapses  
-
-This demonstrates that the observed interface organization is **not reproducible under passive transport assumptions**.
-
----
-
-## Hybrid Transport Model
-
-`scripts_tnbc/step17_tnbc_solve_hybrid_potentials.py`
-
-We introduce a minimal representation:
-
-- gradient component (global structure)  
-- interaction-driven component (interface dynamics)
-
-This hybrid model captures both aspects of spatial organization.
-
----
-
-## Main Outputs
-
-Key manuscript figures are generated from:
-
-- `visium_figures/`
-- `GSM_visium_figures/`
-
-Important outputs include:
-- coexact energy maps  
-- curl maps  
-- region-level statistics  
-- GNN training diagnostics  
-- hybrid decomposition  
-
----
-
-## Reproducibility
-
-The repository includes:
-
-- all analysis scripts  
-- intermediate outputs (`stats/`)  
-- figure generation pipelines  
-
-Raw Visium data should be placed in:
-## Repository structure
-
-```text
-Hodge_Laplacian_GNN
+```
+Hodge_Laplacian_GNN/
 │
-├── README.md
-├── figures/
-├── tables/
+├── README.md                         ← this file
+├── README_TNBC.md                    ← TNBC-specific pipeline and results
+├── reference.bib
 │
-├── scripts_tnbc/
-├── scripts_visium/
+├── scripts_visium/                   ← Prototype pipeline (single Visium section)
+│   ├── step1_visium_map.py
+│   ├── step2_define_regions.py
+│   ├── step3_build_spatial_graph.py
+│   ├── step4_compute_proxy_flux_residuals.py
+│   ├── step5_multi_proxy_residuals.py
+│   ├── step6_hodge_flux_decomposition.py
+│   └── step7_non_gradient_flux.py
+│
+├── scripts_tnbc/                     ← Full TNBC cohort pipeline (Steps 1–24)
+│   ├── step1_tnbc_map.py
+│   ├── step2_tnbc_regions.py
+│   ├── step3_tnbc_spatial_graph.py
+│   ├── step4_tnbc_flux_proxies.py
+│   ├── step5_tnbc_flux_residuals.py
+│   ├── step6_tnbc_hodge_decomposition.py
+│   ├── step7_tnbc_region_enrichment.py
+│   ├── step9_tnbc_curl_maps.py
+│   ├── step10_curl_null_test.py
+│   ├── step11_lie_structured_null.py
+│   ├── step12_region_hotspot_lie_test.py
+│   ├── step13_tnbc_prepare_gnn_data.py
+│   ├── step14_tnbc_train_pde_gnn.py
+│   ├── step15_tnbc_analyze_gnn_flux.py
+│   ├── step16_transport_equation_figure.py
+│   ├── step17_tnbc_solve_hybrid_potentials.py
+│   ├── step18_ablation_no_constraint.py
+│   ├── step19_coexact_bio_correlation.py
+│   ├── step19_generate_csv.py
+│   ├── step20_ncg_commutator.py          ← NCG commutator grounding
+│   ├── step21_zeta_spectral.py           ← Zeta spectral diagnostic
+│   ├── step22_ncg_bio_validation.py      ← Independent biomarker validation
+│   ├── step23_operator_robustness.py     ← Alternative antisymmetric constructions
+│   └── step24_stochastic_hodge_v2.py    ← Stochastic Hodge + Bayesian model comparison
 │
 ├── stats/
-│   ├── CSV_GSM/
-│   └── CSV_visium/
+│   ├── CSV_GSM/                      ← Per-sample CSVs (all steps)
+│   └── gnn_data/                     ← GNN input/output arrays
 │
-├── GSM_visium_figures/
+├── visium_figures/                   ← Spatial maps and diagnostic plots
+├── GSM_visium_figures/               ← Per-GSM figure directories
 │
 ├── data/
 │   ├── TNBC_GSE210616/
+│   │   └── GSM_xxxxx/               ← One directory per sample (see inputs below)
 │   ├── raw_Visium/
-│   ├── README_data.md_GSM.md
-│   └── README_data.md_visium.md
+│   └── README_data.md
 │
-└── reference.bib
+├── figures/
+├── tables/
+└── requirements.txt
 ```
 
+---
 
-## Main outputs currently emphasized
+## Prototype Pipeline (scripts_visium/)
 
-Recommended manuscript-facing outputs:
-- `combined_bar_energyfractions.png`
-- `combined_step7_summary.csv`
-- `combined_step7_summary.tex`
-- `step7_maps_immune_tumor_wedge.png`
-- `step7_boxplots_immune_tumor_wedge.png`
-- `step8_map_node_abs_coexact_immune_tumor_wedge.png`
-- `step8_map_node_mean_curl_immune_tumor_wedge.png`
-- `step8_region_tests_immune_tumor_wedge.csv`
+The `scripts_visium/` directory contains a self-contained prototype applied to a single 10x Genomics Visium breast cancer section, demonstrating the core geometric workflow before TNBC cohort extension.
 
-## Reproducibility
+| Step | Script | Description |
+|------|--------|-------------|
+| 1 | `step1_visium_map.py` | Marker scoring: tumor, stromal, and immune programs |
+| 2 | `step2_define_regions.py` | Region annotation: tumor core / invasive margin / stroma / immune-rich |
+| 3 | `step3_build_spatial_graph.py` | Spatial graph, incidence matrices, discrete Laplacians |
+| 4–5 | `step4_*.py`, `step5_*.py` | Proxy flux residuals |
+| 6 | `step6_hodge_flux_decomposition.py` | Hodge decomposition: exact / coexact / harmonic |
+| 7 | `step7_non_gradient_flux.py` | Wedge-based interaction fluxes (tumor–immune, tumor–stroma, immune–stroma) |
 
-The raw Visium `.h5` expression matrix and spatial image bundle are not meant to be committed to the repository root. Keep raw data in `data/raw/` or another ignored local folder. The tracked repository should prioritize:
-- code
-- lightweight summary tables
-- manuscript-facing figures
-- explicit notes about expected input filenames
+The prototype confirms that wedge-derived interaction fields generate substantial coexact content (20–23% of total energy) concentrated outside the homogeneous tumor core.
 
-See `data/README_data.md` for expected dataset placement and naming.
+---
+
+## TNBC Cohort Pipeline (scripts_tnbc/)
+
+Full 24-step pipeline applied to GSE210616 (22 TNBC patients, 43 Visium sections). See `README_TNBC.md` for step-by-step commands and expected outputs.
+
+### Steps 1–7: Core geometric pipeline
+Marker scoring → region annotation → spatial graph → wedge flux → Hodge decomposition → interface enrichment testing.
+
+### Steps 9–18: Diagnostics and falsification
+Curl maps, Lie-structured null, region hotspot tests, PDE-constrained GNN training, GNN flux analysis, transport equation figure, hybrid potential decomposition, ablation study.
+
+### Steps 19–22: Validation against construction artifacts
+Three independent diagnostics rule out the construction artifact interpretation:
+
+- **Step 19** — Within-interface Spearman correlation: coexact energy vs. residualized biological programs (tumor, immune, stroma). Cohort result: tumor residual median ρ = 0.349 (17/18, *p* = 7.2×10⁻⁵).
+- **Step 20** — NCG commutator grounding: per-node non-commutativity norm vs. coexact energy. Interface correlation median ρ = 0.832 (18/18); specificity Δρ = +0.198 (*p* < 10⁻⁵). Rules out *spatial* construction artifact.
+- **Step 21** — Zeta spectral diagnostic: coexact energy concentrated in low-frequency eigenmodes of the node graph Laplacian. f_low = 0.653 (19/19); Z(s=1) = 1.89 (18/19). Rules out *spectral* construction artifact.
+- **Step 22** — Independent biomarker validation: top-10% NC nodes enriched for cytotoxic, CD8, chemokine, antigen presentation markers (14–15/19, *p* < 0.04); hypoxia null control passed (6/19, *p* = 0.97). Rules out *biological* circularity.
+
+### Step 23: Operator robustness
+Alternative antisymmetric constructions (normalized, rank-based, thresholded wedge) confirm that coexact interface enrichment is invariant to the specific operator algebraic form.
+
+### Step 24: Stochastic Hodge decomposition
+Gaussian priors over the flux field; analytic Bayes factors comparing three model classes:
+
+- **M0** (passive): zero cycle-space variance
+- **M1a** (uniform active): 30 low-frequency cycle modes, uniform spatial distribution
+- **M1b** (interface-localised): same modes, variance redistributed to interface edges (trace-normalised)
+
+Results: log B(M1a/M0) median +45.95 (19/19); log B(M1b/M1a) median +517.6 (19/19, *p* < 10⁻⁵). Probabilistic counterpart of the Step 7 sign test.
+
+---
+
+## Key Manuscript-Facing Outputs
+
+### Primary result files (stats/CSV_GSM/)
+
+```
+*_step6_nodes_hodge_flux_tumor_immune_region_interface_weighted.csv  ← node-level coexact energy + region
+*_step6_edges_hodge_flux_tumor_immune_region_interface_weighted.csv  ← edge-level flux components
+*_step7_region_enrichment_flux_tumor_immune_region_interface_weighted.csv  ← enrichment + permutation p
+*_step19_coexact_bio_*.csv                ← biological anchoring (cohort: 18 sections)
+*_step20_ncg_*.csv                        ← NCG commutator results
+*_step21_zeta_*.csv                       ← Zeta spectral diagnostic
+*_step22_topk_*.csv                       ← Independent biomarker validation
+*_step24v2_summary_*.csv                  ← Stochastic Hodge Bayes factors (per section)
+cohort_step24v2_summary_*.csv             ← Cohort-level stochastic summary
+```
+
+### Key figures (visium_figures/ and GSM_visium_figures/)
+
+| Figure pattern | Description |
+|----------------|-------------|
+| `*_step6_hodge_maps_*.png` | Hodge decomposition spatial maps |
+| `*_step9_curl_maps_*.png` | Curl density maps |
+| `*_step11_lie_hotspots_*.png` | Lie-structured null: curl hotspot locations |
+| `*_step11_lie_null_hist_*.png` | Lie null calibration histograms |
+| `*_step14_gnn_training_history_*.png` | GNN conservation-constrained training |
+| `*_step16_transport_equation_figure_*.png` | Transport equation summary |
+| `*_step18_ablation_plot_*.png` | GNN ablation: coexact collapse |
+| `*_step19_coexact_bio_plot_*.png` | Biological anchoring scatter |
+| `Hybrid_potential_decomposition_*.png` | Hybrid gradient/stream decomposition |
+
+---
+
+## Circularity Boundary (hard constraint)
+
+The following gene sets define the wedge flux and are **forbidden** from any downstream validation step (Steps 19–22, Step 24):
+
+- **Tumor score:** EPCAM, KRT8, KRT18, KRT19, ERBB2, MUC1, TACSTD2
+- **Immune score:** PTPRC, CD3D, CD3E, NKG7, CD68, C1QA, CXCL9, CXCL10
+- **Stroma score:** COL1A1, COL1A2, DCN, LUM, POSTN, FAP, TAGLN
+
+All validation markers in Step 22 were selected specifically to be outside these lists.
+
+---
 
 ## Environment
 
-Create a virtual environment and install the dependencies listed in `requirements.txt`.
+```bash
+python >= 3.9
+pip install scanpy numpy pandas matplotlib scipy scikit-learn networkx
+```
 
-Typical local workflow:
+For the stochastic pipeline (Step 24), no additional dependencies beyond scipy and numpy are required.
 
+Full installation:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If you export LaTeX tables with pandas styling or advanced formatting, make sure `jinja2` is installed.
-
-## Scientific framing
-
-This repository is not built to maximize prediction error metrics in isolation. Its core design principle is falsification under mechanistic structure. Elevated residuals or enriched coexact structure are treated as scientifically meaningful failure modes when a passive transport hypothesis is inadequate.
-
-In practical terms:
-- low error with high conservation inconsistency is a mechanistic warning sign
-- low exactness with enriched coexact structure may indicate interface-driven or non-passive transport organization
-- region-level enrichment is more important than visually pretty maps
-
-## Data and ethics
-
-The current spatial transcriptomics example uses publicly available data. No identifiable human information is used. Raw datasets remain under their original terms of use.
-
-## Citation and reuse
-
-If you reuse the code, operators, or workflow logic from this repository, cite the associated manuscript and clearly indicate any dataset-specific modifications or alternative flux definitions.
-
-
-### Extension to TNBC cohort analysis
-
-The full manuscript pipeline extends this prototype workflow to the TNBC spatial transcriptomics cohort using the scripts in `scripts_tnbc/`.
-
-Additional stages include:
-
-- cohort-scale region enrichment tests
-- Lie-structured null diagnostics
-- PDE-constrained Hodge–Laplacian graph neural network training
-- operator analysis of learned transport fields
-- hybrid gradient/stream potential reconstruction
-
-These stages correspond to:
-
-scripts_tnbc/step9_tnbc_curl_maps.py
-scripts_tnbc/step10_curl_null_test.py
-scripts_tnbc/step11_lie_structured_null.py
-scripts_tnbc/step12_region_hotspot_lie_test.py
-scripts_tnbc/step13_tnbc_prepare_gnn_data.py
-scripts_tnbc/step14_tnbc_train_pde_gnn.py
-scripts_tnbc/step15_tnbc_analyze_gnn_flux.py
-scripts_tnbc/step16_transport_equation_figure.py
-scripts_tnbc/step17_tnbc_solve_hybrid_potentials.py
-
-To biologically validate the operator-level transport phenotype, we applied the full pipeline to spatial transcriptomics data from the TNBC cohort **GSE210616**.
-
-Each tissue section is processed through a structured pipeline that constructs spatial transport fields and tests their geometric structure using Hodge decomposition, null-model diagnostics, and conservation-constrained learning.
-
-### Pipeline overview
-
-## Key manuscript figures
-
-The figures referenced in the manuscript are located in:
-
-GSM_visium_figures/GSM_6433618_fig/
-GSM_visium_figures/GSM_6433619_fig/
-
-These correspond to the TNBC Visium sections analyzed in the study.
-The cohort analysis is implemented in `scripts_tnbc/`.
-
-| Step | Script | Description |
-|-----|------|-------------|
-| 1 | `step1_tnbc_map.py` | Load TNBC Visium data and compute marker scores |
-| 2 | `step2_tnbc_regions.py` | Assign tissue regions (tumor / stroma / immune / interface-like) |
-| 3 | `step3_tnbc_spatial_graph.py` | Construct spatial cell complex and incidence operators |
-| 4 | `step4_tnbc_flux_proxies.py` | Build proxy and residualized flux fields |
-| 5 | `step5_tnbc_flux_residuals.py` | Compute conservation-style residual summaries |
-| 6 | `step6_tnbc_hodge_decomposition.py` | Perform Hodge decomposition of flux fields |
-| 7 | `step7_tnbc_region_enrichment.py` | Region-level enrichment analysis of transport components |
-| 8 | `run_tnbc_screening.py` | Cohort-level orchestration / screening pipeline |
-| 9 | `step9_tnbc_curl_maps.py` | Compute and visualize face curl structure |
-| 10 | `step10_curl_null_test.py` | Randomized null test for curl structure |
-| 11 | `step11_lie_structured_null.py` | Operator-derived Lie-structured null |
-| 12 | `step12_region_hotspot_lie_test.py` | Region-level hotspot enrichment vs Lie null |
-| 13 | `step13_tnbc_prepare_gnn_data.py` | Prepare graph data for PDE-constrained GNN training |
-| 14 | `step14_tnbc_train_pde_gnn.py` | Train PDE-constrained Hodge-Laplacian GNN |
-| 15 | `step15_tnbc_analyze_gnn_flux.py` | Analyze learned GNN flux with operator diagnostics |
-| 16 | `step16_transport_equation_figure.py` | Generate transport-equation summary figure |
-| 17 | `step17_tnbc_solve_hybrid_potentials.py` | Solve hybrid gradient/stream potential decomposition |
 ---
 
-### Key outputs
+## Scientific Framing
 
-Representative outputs are written to `stats/` and `visium_figures/`.
+This repository is not built to maximize prediction error metrics in isolation. Its core design principle is **falsification under mechanistic structure**:
 
-Examples include:
+- Low error with high conservation inconsistency is a mechanistic warning sign.
+- Enriched coexact structure at interfaces, under three independent diagnostics and one stochastic framework, constitutes evidence of non-passive transport organization.
+- The framework identifies incompatibility with the passive transport model class — it does not assert a unique biological mechanism.
 
-**Proxy and learned flux summaries**
-- `stats/GSM_6433618_step14_gnn_summary_flux_tumor_immune.csv`
-- `stats/GSM_6433618_step15_gnn_operator_summary_flux_tumor_immune.csv`
-
-**Curl and hotspot statistics**
-- `stats/GSM_6433618_step15_face_curl_gnn_flux_tumor_immune.csv`
-- `stats/GSM_6433618_step15_hotspot_enrichment_gnn_flux_tumor_immune.csv`
-
-**Hybrid potential decomposition**
-- `stats/GSM_6433618_step17_proxy_hybrid_flux_tumor_immune_summary.csv`
-- `stats/GSM_6433618_step17_gnn_hybrid_flux_tumor_immune_summary.csv`
-
-**Figures**
-- `GSM_visium_figures/GSM_6433618_fig/GSM_6433618_step14_gnn_training_history_flux_tumor_immune.png`
-- `GSM_visium_figures/GSM_6433618_fig/GSM_6433618_step16_transport_equation_figure_flux_tumor_immune.png`
-- `GSM_visium_figures/GSM_6433618_fig/GSM_6433618_Hybrid_potential_decomposition_of_learned_transport_field.png`
-
+> "Identifies incompatibility with passive transport, without asserting a unique underlying biological mechanism."
 
 ---
 
-### Figures
+## Data and Ethics
 
-Generated figures are stored in:
-GSM_visium_figures/
-
-Important outputs include:
-
-| Figure | Description |
-|------|-------------|
-| `step6_hodge_maps_flux_*` | Hodge decomposition visualization |
-| `step9_curl_maps_flux_*` | Curl density maps |
-| `step11_lie_hotspots_flux_*` | High-curl hotspot locations |
-| `step11_lie_null_hist_*` | Lie-null calibration plots |
+All data used in this study are publicly available from NCBI Gene Expression Omnibus (GSE210616). No identifiable human information is accessed or stored. Raw datasets remain under their original terms of use.
 
 ---
 
-### Example result
+## Reproducibility
 
-For sample **GSM_6433618**:
-Interface hotspot enrichment = 1.456
-p ≈ 0.002
+Raw Visium data should be placed in `data/TNBC_GSE210616/GSM_xxxxx/`. See `README_TNBC.md` for the full step-by-step reproducibility commands.
 
-For sample **GSM_6433619**:
-Interface hotspot enrichment = 1.053
-p ≈ 0.002
+Recommended files to track in version control:
+```
+scripts_tnbc/          ← all analysis scripts
+stats/CSV_GSM/*.csv    ← lightweight per-sample summaries
+visium_figures/        ← manuscript figures
+reference.bib
+requirements.txt
+```
 
-These results indicate that rotational transport motifs are **significantly enriched at tumor–immune interfaces**, while global curl statistics remain consistent with the Lie null model.
+Avoid committing `.npy`/`.npz` intermediates unless required for end-to-end reruns.
 
-This pattern supports the interpretation that transport geometry becomes structured specifically at biological boundaries.
+---
+
+## Citation
+
+If you use this pipeline, please cite:
+
+> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.* Bioinformatics Advances, 2026. Submission BIOINF-2026-0777.
+
+Dataset:
+
+> Bassiouni R et al. *Spatial Transcriptomic Analysis of a Diverse Patient Cohort Reveals a Conserved Architecture in Triple-Negative Breast Cancer.* Cancer Research 83(1):34–48, 2023. GEO: GSE210616.
+
+---
+
+## Contact
+
+Open a GitHub issue or contact via the repository: [github.com/Anas-Enoch/Hodge_Laplacian_GNN](https://github.com/Anas-Enoch/Hodge_Laplacian_GNN)

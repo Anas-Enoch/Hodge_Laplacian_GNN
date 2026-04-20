@@ -1,0 +1,5 @@
+metric,n_fovs,median,n_positive,sign_test_p
+rna_protein_coherence,108,0.3214,106,0.0
+juxta_r,108,0.0566,75,3e-05
+coex_PanCK_r,108,0.0394,66,0.01321
+coex_CD45_r,108,0.0531,73,0.00016

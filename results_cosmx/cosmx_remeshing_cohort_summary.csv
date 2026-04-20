@@ -1,0 +1,6 @@
+graph_type,n_fovs_tested,n_fovs_R_gt1,n_fovs_divergent,median_log10_R,pct_R_gt1
+knn_4,10,8,0,0.363,80.0
+knn_6,10,8,0,0.341,80.0
+knn_8,10,8,0,0.383,80.0
+delaunay,10,8,0,0.389,80.0
+radius,10,8,0,0.475,80.0

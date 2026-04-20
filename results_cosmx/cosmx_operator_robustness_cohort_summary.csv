@@ -1,0 +1,6 @@
+operator,n_sections,n_enriched,median_R,sign_test_p,median_frac_coexact,verdict
+proxy_wedge,96,78,2.127,0.0,0.3614,SURVIVES
+normalized_wedge,96,94,3.143,0.0,0.3335,SURVIVES
+rank_antisym,96,91,2.106,0.0,0.3391,SURVIVES
+thresholded_antisym,96,78,2.046,0.0,0.3578,SURVIVES
+sign_only,96,95,1.574,0.0,0.3882,SURVIVES

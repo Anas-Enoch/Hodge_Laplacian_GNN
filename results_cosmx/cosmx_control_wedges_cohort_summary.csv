@@ -1,0 +1,6 @@
+operator,n,median_R,wilcoxon_p,n_log_canon_wins,n_matched,log_commutator_p,median_log_delta,verdict
+tumor_x_housekeeping,96,0.826,0.0,90,96,0.0,0.991,EXCLUDED
+tumor_x_stroma,96,1.191,0.0,70,96,0.0,0.566,EXCLUDED
+stroma_x_epithelial,96,1.586,0.0323,62,96,0.0028,0.344,PARTIAL
+shuffled_AB,96,1.028,0.0,78,96,0.0,0.686,EXCLUDED
+immune_x_housekeeping,96,2.398,0.9139,39,96,0.974,-0.172,ONE_SIDED_GRADIENT_CONTROL — see Test A/B above

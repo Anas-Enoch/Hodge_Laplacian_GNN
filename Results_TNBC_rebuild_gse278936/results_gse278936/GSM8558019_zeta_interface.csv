@@ -1,0 +1,2 @@
+sample,n_nodes,n_interface,Z_global,Z_interface,Z_interface_over_global,alpha_sum_global,alpha_sum_interface,k_eigenmodes_used,k_requested,normalization,truncation_note
+GSM8558019,578,269,9.256954140751876,10.82629153790137,1.16953064402033,2.597566886091747,1.7638362129273775,47,50,normalized_alpha_sum,k=50 truncated approximation; not numerically comparable to full-spectrum Z(s=1) in GSE210616 pipeline

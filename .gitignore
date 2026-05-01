@@ -13,3 +13,5 @@ data/TNBC_GSE210616/
 *.webarchive
 .DS_Store
 *.webarchive
+archive/docs/
+data/

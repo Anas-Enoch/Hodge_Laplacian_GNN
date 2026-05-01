@@ -1,44 +1,45 @@
 # CosMx External Validation
-## Cross-technology and Cross-resolution Replication (Single-cell Spatial Transcriptomics)
 
-This document describes the full reproducible pipeline used to validate the Hodge–Laplacian framework on CosMx single-cell spatial transcriptomics data, as reported in Section 16.13 of the manuscript.
+**Cross-technology and Cross-resolution Replication (Single-cell Spatial Transcriptomics)**
+
+This document describes the full reproducible pipeline used to validate the Hodge–Laplacian transport framework on CosMx single-cell spatial transcriptomics data, as reported in Section 16.13 of the manuscript.
 
 **Scientific goal:** Test whether interface-localized coexact non-gradient interaction enrichment — established in the GSE210616 Visium TNBC discovery cohort at spot-level resolution — replicates at single-cell resolution in an independent cohort across a different measurement technology. Rotational interpretation is restricted to explicit upper-Hodge / face-level construction and should not be generalized to all coexact structure.
 
-**Framework alignment:** In the final multilayer framework (manuscript v7), CosMx is used as **cross-technology validation of the local coexact-enrichment layer only**. It is not used for corrected Zeta energy-matched nulls, graph-KS instability analysis, or KTS transition-bias analysis. Those analyses are documented in `README_GSE278936_PIPELINE.md` and `README_TNBC.md`.
+**Framework alignment (manuscript v7):** CosMx is used as **cross-technology validation of the local coexact-enrichment layer only**. It is not used for corrected Zeta energy-matched nulls, graph-KS instability analysis, or KTS transition-bias analysis. Those analyses are documented in `README_GSE278936_PIPELINE.md` and `README_TNBC.md`.
 
 **Final CosMx interpretation:** CosMx validates that coexact non-gradient interaction enrichment at tumor–immune interfaces is not specific to Visium spot-level data and can be recovered at single-cell spatial resolution. It does not extend the final manuscript's corrected spectral, KTS, or KS claims unless those analyses are explicitly added.
 
 ---
 
-## What is Included
+## What is included in this repository
 
-The following processed summary files are **already included** and allow verification of all reported results without re-running the full pipeline:
+The following processed summary files are **already included** and allow verification of all reported results without re-running the full pipeline or downloading raw data:
 
 | File | Contents |
-|---|---|
-| `results_cosmx/cosmx_breast_hodge_summary.csv` | Per-FOV coexact enrichment ratios, permutation p-values, region sizes |
+|------|----------|
+| `results_cosmx/cosmx_breast_hodge_summary.csv` | Per-FOV enrichment ratios, permutation p-values, region sizes |
 | `results_cosmx/cosmx_control_wedges_cohort_summary.csv` | Control operator cohort summary |
 | `results_cosmx/cosmx_density_control_cohort_summary.csv` | Density control cohort summary |
 | `results_cosmx/cosmx_operator_robustness_cohort_summary.csv` | Operator robustness cohort summary |
 | `results_cosmx/cosmx_protein_anchoring_cohort_summary.csv` | Protein anchoring cohort summary |
 | `results_cosmx/cosmx_remeshing_cohort_summary.csv` | Remeshing stability cohort summary |
 
-These files support the CosMx-specific claim that coexact energy enrichment at tumor–immune interfaces replicates at single-cell resolution. They should **not** be interpreted as evidence for interface-specific spectral organization, KTS transition bias, or KS-like instability unless those analyses are explicitly performed.
-
-**Raw CosMx expression data are not redistributed** due to data usage and licensing constraints.
+**Raw CosMx expression data are not redistributed** in this repository due to data usage and licensing constraints. See [Dataset](#dataset) for download instructions.
 
 ---
 
 ## Dataset
 
+You must download the raw data manually from the official NanoString source:
+
 | Field | Value |
-|---|---|
+|-------|-------|
 | Platform | NanoString CosMx Spatial Molecular Imager |
 | Dataset | Breast Cancer Multiomic (RNA + protein) |
 | URL | https://nanostring.com/products/cosmx-spatial-molecular-imager/ffpe-dataset/ |
 
-Place downloaded files at:
+After download, place the files in the expected location:
 
 ```
 data/Breast_Multiomic/Flatfiles_RNA/flatFiles/BreastCancer/
@@ -46,38 +47,87 @@ data/Breast_Multiomic/Flatfiles_RNA/flatFiles/BreastCancer/
 └── BreastCancer_metadata_file.csv.gz
 ```
 
+All outputs are written to `results_cosmx/`. All scripts read and write **relative to the repository root**.
+
+---
+
+## Repository Layout
+
+```
+Hodge_Laplacian_GNN/
+├── scripts_cosmx/
+│   ├── step01_cosmx_build_canonical_cells.py
+│   ├── step02_cosmx_define_regions.py
+│   ├── step03_cosmx_graph_wedge.py
+│   ├── step04_cosmx_control_wedges.py
+│   ├── step05_cosmx_density_control.py
+│   ├── step06_cosmx_operator_robustness.py
+│   ├── step07_cosmx_protein_anchoring.py
+│   └── step08_cosmx_remeshing_sensitivity.py
+├── data/
+│   └── Breast_Multiomic/                    ← download here
+│       └── Flatfiles_RNA/flatFiles/BreastCancer/
+└── results_cosmx/                           ← all outputs written here
+    ├── cosmx_breast_hodge_summary.csv       ← already included
+    ├── cosmx_control_wedges_cohort_summary.csv
+    ├── cosmx_density_control_cohort_summary.csv
+    ├── cosmx_operator_robustness_cohort_summary.csv
+    ├── cosmx_protein_anchoring_cohort_summary.csv
+    └── cosmx_remeshing_cohort_summary.csv
+```
+
+---
+
+## Environment Setup
+
+```bash
+source .venv/bin/activate
+```
+
+The CosMx pipeline shares the same environment as the main TNBC pipeline. Reproduce the environment from the repository's pinned environment files:
+
+```bash
+pip install -r requirements.txt   # or: pip install -e .
+```
+
+Python version and all dependency versions are pinned in the repository. No additional packages beyond those required by the main pipeline are needed.
+
 ---
 
 ## Circularity Boundary (Hard Constraint)
 
+The following gene sets define the wedge operator (Steps 01–03) and are **forbidden from any downstream validation step** (Steps 04–08):
+
 | Program | Genes |
-|---|---|
+|---------|-------|
 | Tumor | EPCAM, KRT8, KRT18, KRT19, ERBB2, MUC1, TACSTD2 |
 | Immune | PTPRC, CD3D, CD3E, NKG7, CD68, C1QA, CXCL9, CXCL10 |
-| Stroma | COL1A1, COL1A2, DCN, LUM, TAGLN, POSTN, FAP |
+| Stroma | COL1A1, COL1A2, DCN, LUM, POSTN, FAP, TAGLN |
 
-ACTA2 and VIM were removed from the stromal construction panel to reduce smooth-muscle/fibroblast and immune-activation overlap; POSTN and FAP are added to align with the final manuscript marker logic.
+Any validation marker or covariate must be outside these three gene sets. ACTA2 and VIM (present in earlier drafts) have been removed; POSTN and FAP added to align with the final manuscript marker logic.
 
 ---
 
 ## Pipeline Overview
 
+Eight sequential scripts. Each script is self-contained and reads the output of the previous step.
+
 ```
 Step 01 → canonical cell table
 Step 02 → region assignment
 Step 03 → graph + wedge + upper-Hodge decomposition + coexact enrichment  ← primary CosMx result
-Step 04 → control wedge analysis                                           ← confound exclusion
-Step 05 → density control                                                  ← confound exclusion
-Step 06 → operator robustness                                              ← construction robustness
-Step 07 → protein anchoring                                                ← cross-modality validation
-Step 08 → remeshing sensitivity                                            ← graph-construction invariance
+Step 04 → control wedge analysis                            ← confound exclusion
+Step 05 → density control                                   ← confound exclusion
+Step 06 → operator robustness                               ← construction robustness
+Step 07 → protein anchoring                                 ← cross-modality validation
+Step 08 → remeshing sensitivity                             ← graph-construction invariance
 ```
-
-CosMx Step 03 uses a Delaunay face complex and upper-Hodge decomposition, whereas GSE278936 and rebuilt TNBC corrected analyses use graph-based controls. Therefore, CosMx coexact enrichment should be compared as a **direction-of-effect validation**, not as a direct numerical validation of graph-curl, Zeta, KTS, or KS outputs.
 
 ---
 
 ## One-Command Run Order
+
+Copy-paste sequence to run the full pipeline from scratch:
 
 ```bash
 source .venv/bin/activate
@@ -104,7 +154,8 @@ python scripts_cosmx/step03_cosmx_graph_wedge.py \
 
 python scripts_cosmx/step04_cosmx_control_wedges.py \
   --cells  results_cosmx/cosmx_breast_cells_hodge.csv.gz \
-  --out    results_cosmx/ --n-perm 500
+  --out    results_cosmx/ \
+  --n-perm 500
 
 python scripts_cosmx/step05_cosmx_density_control.py \
   --cells   results_cosmx/cosmx_breast_cells_hodge.csv.gz \
@@ -113,13 +164,15 @@ python scripts_cosmx/step05_cosmx_density_control.py \
 
 python scripts_cosmx/step06_cosmx_operator_robustness.py \
   --cells  results_cosmx/cosmx_breast_cells_hodge.csv.gz \
-  --out    results_cosmx/ --n-perm 500
+  --out    results_cosmx/ \
+  --n-perm 500
 
 python scripts_cosmx/step07_cosmx_protein_anchoring.py \
   --cells   results_cosmx/cosmx_breast_cells_hodge.csv.gz \
   --summary results_cosmx/cosmx_breast_hodge_summary.csv \
   --out     results_cosmx/
 
+# Run on a representative subset first (recommended); omit --fovs for full cohort
 python scripts_cosmx/step08_cosmx_remeshing_sensitivity.py \
   --cells results_cosmx/cosmx_breast_cells_hodge.csv.gz \
   --fovs  37,41,46,58,76,87,94,104,120,132 \
@@ -131,53 +184,117 @@ python scripts_cosmx/step08_cosmx_remeshing_sensitivity.py \
 ## Step-by-Step Reference
 
 ### Step 01 — Canonical Cell Table
-Reads CosMx expression matrix and metadata; computes per-FOV z-scored program scores.
-Output: `cosmx_breast_canonical_cells.csv.gz`
+
+Reads the CosMx expression matrix and metadata, aligns them, computes per-FOV z-scored program scores, and writes one row per cell.
+
+**Key design decisions:**
+- Z-scoring is **per-FOV** (not global), consistent with the per-FOV quantile thresholds in Step 02.
+- Column detection uses header-only scan (`nrows=0`) to prevent gene dropout from NaN-valued early rows.
+- Deduplication asserts uniqueness on the composite `(fov, cell_id_numeric)` key.
+
+**Output:** `results_cosmx/cosmx_breast_canonical_cells.csv.gz`
+Columns: `cell`, `cell_id_numeric`, `fov`, `x`, `y`, `cell_area_px`, `total_counts`, `protein_tumor_proxy`, `protein_immune_proxy`, `protein_myeloid_proxy`, `tumor_score`, `immune_score`, `stroma_score`, `log_total_counts`.
+
+---
 
 ### Step 02 — Region Assignment
-Classifies cells as tumor, immune, interface, tumor_core, or other per FOV.
-Tumor-core minimum distance = 3× base_spacing; interface radius = 2× base_spacing.
-Output: `cosmx_breast_cells_with_regions.csv.gz`
 
-### Step 03 — Graph, Wedge, Hodge, Enrichment *(primary CosMx result)*
-Builds Delaunay complex per FOV; computes antisymmetric tumor–immune wedge; decomposes using the **upper-Hodge simplicial formulation**; tests whether coexact energy is enriched at interface cells relative to tumor-core cells.
+Classifies each cell as `tumor`, `immune`, `interface`, `tumor_core`, or `other` per FOV.
 
-The upper-Hodge CosMx construction supports circulation-like interpretation within the Delaunay face complex, but the **primary cohort-level claim remains coexact energy enrichment**. This should not be conflated with the graph-curl proxy used in GSE278936.
+**Key design decisions:**
+- Absolute score floor (default 0.0 = per-FOV mean) prevents background-noise cells in single-compartment FOVs from being promoted to the minority class.
+- Tumor-core minimum distance = `3 × base_spacing` vs interface radius = `2 × base_spacing`, creating a clean gap zone between interface and comparison baseline.
+- FOVs where > 80% of cells are `other` are flagged as potentially miscalibrated.
 
-Upper-Hodge is **not directly comparable** to lower-Hodge used in the Visium pipeline. Cross-technology comparison is valid for direction (R > 1) and rank order; comparison of absolute coexact fractions is not.
+**Output:** `results_cosmx/cosmx_breast_cells_with_regions.csv.gz`
 
-Outputs: `cosmx_breast_cells_hodge.csv.gz`, `cosmx_breast_hodge_summary.csv`
+---
+
+### Step 03 — Graph, Wedge, Hodge, Enrichment
+
+Core analysis. Builds a Delaunay complex per FOV, computes the antisymmetric tumour–immune wedge, decomposes it via full Hodge theory, and tests coexact enrichment at interface versus tumour-core cells.
+
+**Key design decisions:**
+- **Upper-Hodge decomposition** (B₁ + B₂): full simplicial complex. See [Known Caveats](#known-caveats) — this is **not directly comparable** to the lower-Hodge used in the Visium pipeline.
+- **Restricted permutation**: shuffles labels only within the interface + tumour-core pool. Matches the Visium Step 7 design.
+- Vectorised wedge and node energy; lsqr tolerance 1e-10.
+
+**Outputs:**
+- `results_cosmx/cosmx_breast_cells_hodge.csv.gz` — adds `node_coexact_energy`, `node_exact_energy`, `node_harm_energy`
+- `results_cosmx/cosmx_breast_hodge_summary.csv` — per-FOV enrichment ratios and permutation p-values
+
+---
 
 ### Step 04 — Control Wedge Analysis
-Tests whether signal is reproduced by biologically unrelated operators.
-Note: `immune × housekeeping` is a one-sided gradient diagnostic, not a null control.
-Outputs: `cosmx_control_wedges_per_fov.csv`, `cosmx_control_wedges_cohort_summary.csv`
+
+Tests whether the canonical signal is reproduced by biologically unrelated operators.
+
+**Note:** `immune × housekeeping` is treated as a one-sided gradient diagnostic, not a null control. The verdict rests on (A) the THK/IHK asymmetry proof and (B) per-FOV canonical residual over IHK. Terminal output clearly separates these. Any `ONE_SIDED_GRADIENT_CONTROL` label in the CSV is expected and correct.
+
+**Outputs:** `results_cosmx/cosmx_control_wedges_per_fov.csv`, `cosmx_control_wedges_cohort_summary.csv`
+
+---
 
 ### Step 05 — Density Control
+
 Tests whether enrichment is explained by cell density differences.
-Primary test: structural sign test on per-FOV T2 density ratios.
-Outputs: `cosmx_density_control_per_fov.csv`, `cosmx_density_control_cohort_summary.csv`
+
+**Note:** Cell-level partial Spearman is not used here (unlike Visium Step 25) because `node_coexact_energy` is a graph property with spatial autocorrelation at single-cell resolution. The primary test is a structural sign test on per-FOV T2 density ratios.
+
+**Outputs:** `results_cosmx/cosmx_density_control_per_fov.csv`, `cosmx_density_control_cohort_summary.csv`
+
+---
 
 ### Step 06 — Operator Robustness
+
 Five operators in decreasing information order: proxy → normalised → rank → threshold → sign-only.
-Outputs: `cosmx_operator_robustness_per_fov.csv`, `cosmx_operator_robustness_cohort_summary.csv`
+
+**Outputs:** `results_cosmx/cosmx_operator_robustness_per_fov.csv`, `cosmx_operator_robustness_cohort_summary.csv`
+
+---
 
 ### Step 07 — Protein Anchoring
-Links RNA-derived coexact energy to protein-defined tumor–immune organization.
-Outputs: `cosmx_protein_anchoring_per_fov.csv`, `cosmx_protein_anchoring_cohort_summary.csv`
+
+Links RNA-derived coexact energy to protein-defined tumour–immune organisation.
+
+**Note on terminal output:** pandas `SettingWithCopyWarning` messages that may appear during execution are benign — they arise from internal DataFrame handling and do not affect any numeric outputs. All reported results are unaffected.
+
+**Outputs:** `results_cosmx/cosmx_protein_anchoring_per_fov.csv`, `cosmx_protein_anchoring_cohort_summary.csv`
+
+---
 
 ### Step 08 — Remeshing Sensitivity
-Primary metric: sign-consistency (direction of R − 1), not magnitude stability.
-Outputs: `cosmx_remeshing_per_fov.csv`, `cosmx_remeshing_cohort_summary.csv`
+
+Tests whether the coexact enrichment direction is invariant to graph construction.
+
+**Primary metric: sign-consistency**, not R>1 rate. A FOV that is consistently non-enriched (R<1) across all graph types is sign-consistent and counts as a stability finding.
+
+**Outputs:** `results_cosmx/cosmx_remeshing_per_fov.csv`, `cosmx_remeshing_cohort_summary.csv`
+
+---
+
+## Reproducibility Contract
+
+The following four invariants hold across any correct re-run of this pipeline:
+
+1. **Seeds are fixed.** All permutation tests use `--seed 42` by default. Results may differ at the last digit under different seeds but not at the conclusion level.
+
+2. **Delaunay options are fixed.** All Delaunay triangulations use `qhull_options="QJ Qbb Qc Qz"` with explicit ghost-vertex filtering (`0 ≤ vertex < n_points`).
+
+3. **Upper-Hodge is not comparable to lower-Hodge.** The `coexact_fraction_global` values in CosMx (median ≈ 0.36) are systematically higher than in Visium (≈ 0.08–0.28) because Step 03 uses the full B₂ simplicial incidence matrix. This is a methodological difference, not a biological one. Cross-technology comparison of direction (R > 1) and rank order is valid; comparison of absolute coexact fractions is not.
+
+4. **Radius graph is excluded from primary stability verdict.** Step 08 uses kNN (k=4,6,8) and Delaunay as primary and secondary graph types. The radius graph is retained descriptively; in small-core FOVs it produces near-zero tumour-core coexact medians and numerically divergent ratios.
 
 ---
 
 ## Reproducibility Checkpoint
 
+A correct re-run of Steps 01–03 and verification against the provided summary CSVs should recover these cohort-level numbers:
+
 | Metric | Expected value |
-|---|---|
+|--------|----------------|
 | Total FOVs processed | 108 |
-| Testable FOVs | 96 |
+| Testable FOVs (n_interface ≥ 5 and n_tumor_core ≥ 5) | 96 |
 | FOVs with R > 1 | 78/96 |
 | Sign test p (R > 1) | 2.2 × 10⁻¹⁰ |
 | Median R (IQR) | 2.09 (1.22–3.12) |
@@ -186,26 +303,26 @@ Outputs: `cosmx_remeshing_per_fov.csv`, `cosmx_remeshing_cohort_summary.csv`
 | Generic antisymmetry verdict | EXCLUDED |
 | Cell density verdict | EXCLUDED (T2 < 1 in 77/96, p < 10⁻⁹) |
 | Operator robustness (all 5 variants) | SURVIVES (all p < 10⁻⁵) |
-| Protein juxtaposition | 75/108 (p < 10⁻⁵) |
+| Protein juxtaposition (positive FOVs) | 75/108 (p < 10⁻⁵) |
 | Remeshing sign-consistency | 19/19 FOVs (100%) |
 
-These checkpoint values validate the CosMx **local coexact-enrichment layer**. They do not imply that CosMx has been tested for energy-matched Zeta collapse, KTS exhaustion attractors, or graph-KS instability.
+These values are the checksum for a successful reproduction. If your numbers differ, check: (a) Delaunay `qhull_options` match exactly; (b) per-FOV z-scoring (not global) in Step 01; (c) restricted permutation (interface+core pool only) in Step 03; (d) `--hodge-type upper` in Step 03.
 
 ---
 
 ## Known Caveats
 
-1. **Upper-Hodge vs lower-Hodge.** `coexact_fraction_global` in CosMx (median ≈ 0.36) is systematically higher than in Visium (≈ 0.08–0.28) because Step 03 uses the full B₂ simplicial incidence matrix. Direction (R > 1) and rank are cross-technology comparable; absolute fractions are not.
+1. **Upper-Hodge vs lower-Hodge.** `coexact_fraction_global` in CosMx (Step 03, upper-Hodge) is not numerically comparable to Visium (lower-Hodge). The cross-technology comparison is valid for direction (R > 1) and rank, not for absolute coexact fractions.
 
-2. **Radius graph excluded from remeshing verdict.** Three FOVs showed divergent ratios from the radius graph due to near-zero tumor-core coexact energy. Retained descriptively only.
+2. **Radius graph excluded from remeshing verdict.** Three FOVs in the first test batch showed divergent ratios (R > 10⁹) from the radius graph due to near-zero tumour-core coexact energy. The radius graph is retained for descriptive context but excluded from the sign-consistency and rank-stability claims.
 
-3. **Magnitude stability is not the primary remeshing criterion.** The claim is sign-consistency, not magnitude stability.
+3. **Magnitude stability is not the primary remeshing criterion.** Absolute R values vary across graph types (expected: more edges → different coexact normalisation). The primary claim is sign-consistency (direction of R − 1), not magnitude stability.
 
-4. **Small-core FOVs.** FOVs with n_tumor_core ≤ 5 can show extreme R values. Use `perm_p` as the inferential criterion.
+4. **Small-core FOVs produce extreme ratio values.** FOVs with n_tumor_core ≤ 5 can show R > 100 or R > 1000 because the permutation test median at the core fluctuates near zero. These are valid results but should be interpreted in terms of direction, not magnitude. The enrichment_ratio in `cosmx_breast_hodge_summary.csv` reports raw values; `perm_p` is the inferential criterion.
 
 ---
 
-## Compatibility with Manuscript v7
+## Contact
 
 This README corresponds to the CosMx cross-technology validation component of manuscript v7. The final manuscript distinguishes coexact enrichment from higher-order spatial organization: CosMx supports the enrichment layer, while corrected Zeta, graph-curl, KTS, and KS analyses are reported separately for GSE278936 and rebuilt TNBC outputs.
 

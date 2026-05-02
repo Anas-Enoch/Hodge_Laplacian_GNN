@@ -265,6 +265,6 @@ pip install -r requirements.txt
 
 ## Citation
 
-> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.* Bioinformatics Advances, 2026. Submission BIOINF-2026-0777.
+> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.
 
 > Bassiouni R et al. *Spatial Transcriptomic Analysis of a Diverse Patient Cohort Reveals a Conserved Architecture in Triple-Negative Breast Cancer.* Cancer Research 83(1):34–48, 2023. GEO: GSE210616.

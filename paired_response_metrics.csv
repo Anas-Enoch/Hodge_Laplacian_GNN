@@ -1,0 +1,6 @@
+label,metric,pre,post,delta,direction
+paired_sample,coexact_energy_median,0.035916007854385604,0.0414777370737001,0.0055617292193144985,increase
+paired_sample,coexact_exact_ratio_median,2.205522725834965,2.992751689559425,0.78722896372446,increase
+paired_sample,ks_like_median,0.048029329313940536,0.06081642336950901,0.012787094055568472,increase
+paired_sample,CDIS_median,-0.2450432970251844,-0.29852638527880115,-0.05348308825361675,decrease
+paired_sample,kts_exhaustion_bias_median,,,,NA

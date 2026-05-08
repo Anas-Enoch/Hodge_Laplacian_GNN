@@ -1,69 +1,50 @@
 # Interface Regime Pipeline
-## scripts_gse278936/ — Two-Regime Operator Testing and Therapeutic Hypothesis Generation
+
+**Location:** `scripts_gse278936/`  
+**Purpose:** Two-regime operator testing and therapeutic hypothesis generation for tumor–immune interface analysis
 
 ---
 
-## SAFETY STATEMENT (Read First)
+## ⚠ Safety Statement
 
-> These analyses generate formal operator-derived hypotheses, not clinical
-> recommendations. The physics analogies (Maxwell–Boltzmann and Euler–Bernoulli)
-> are **interpretive operator analogies** and do not claim that tumor tissue
-> literally follows Maxwell–Boltzmann or Euler–Bernoulli dynamics. The pipeline
-> tests gradient-compatible bulk versus non-integrable constraint-dominated
-> interface using coexact enrichment, graph curvature, KS-like instability,
-> and KTS exhaustion bias. All therapeutic principles require orthogonal
-> experimental validation before any clinical inference can be drawn.
+> These analyses generate **formal operator-derived hypotheses, not clinical recommendations**.  
+> The physics analogies (Maxwell–Boltzmann, Euler–Bernoulli) are **interpretive operator analogies** — they do not claim that tumor tissue literally follows these equations.  
+> All therapeutic principles require orthogonal experimental validation before any clinical inference can be drawn.
 
 ---
 
 ## Purpose
 
-This pipeline tests the two-regime hypothesis derived from the main manuscript:
+This pipeline tests the two-regime hypothesis:
 
-> Tumor–immune interfaces represent a distinct non-equilibrium operator regime
-> with elevated non-gradient interaction, instability-like activity, and a shifted
-> constraint configuration relative to the near-equilibrium gradient-compatible
-> tumor bulk. Therapeutic hypotheses may be generated around interface-specific operator regimes;
-> if validated experimentally, they would suggest targeting the interface not by amplifying
-> gradients, but by disrupting or exploiting its non-integrable interaction structure.
-> These are formal hypotheses, not clinical recommendations.
-
-This is an operator-level claim. The pipeline tests whether the claim is
-supported by quantitative operator metrics across spatial transcriptomics cohorts.
+> Tumor–immune interfaces represent a distinct non-equilibrium operator regime with elevated non-gradient interaction, instability-like activity, and a shifted constraint configuration relative to the near-equilibrium gradient-compatible tumor bulk. Therapeutic hypotheses may be generated around interface-specific operator regimes; if validated experimentally, they would suggest targeting the interface not by amplifying gradients, but by disrupting or exploiting its non-integrable interaction structure. **These are formal hypotheses, not clinical recommendations.**
 
 ---
 
-## The Two-Regime Model (Operator Formulation)
+## The Two-Regime Model
 
-### Bulk regime (near-equilibrium, gradient-compatible)
+### Bulk regime — near-equilibrium, gradient-compatible
 
-In the tumor bulk, the interaction field is approximately integrable under a
-gradient-only model. The exact (gradient) component dominates; coexact energy
-is low; the KS-like instability proxy is low. In operator terms, the bulk
-resembles a near-equilibrium statistical field where program interactions are
-diffuse and directionally unstructured.
+The exact (gradient) component dominates; coexact energy is low; KS-like instability is low. The interaction field is approximately integrable under a gradient-only model.
 
-**Analogy:** Near-equilibrium statistical dynamics where local gradients dominate.
-**Operator signature:** Low coexact energy, low graph curvature, low CDIS. Note: when flux_exact is unavailable, coexact_exact_ratio is not used as a primary quantitative claim; CDIS is computed using the reduced formula (coexact energy, bilaplacian magnitude, nonlinear gradient energy).
+| Property | Value |
+|---|---|
+| Analogy | Near-equilibrium statistical dynamics |
+| Operator signature | Low coexact energy, low graph curvature, low CDIS |
+| Note | When `flux_exact` is unavailable, `coexact_exact_ratio` is not used as a primary quantitative claim; CDIS uses the reduced formula |
 
-### Interface regime (non-equilibrium, constraint-dominated)
+### Interface regime — non-equilibrium, constraint-dominated
 
-At the tumor–immune boundary, the interaction field is not reducible to a
-gradient — coexact enrichment was observed in 40/40 TNBC sections and in the majority of GSE278936 sections; verify exact count against cohort_summary.csv. The graph-Laplacian curvature of the coexact field is higher;
-the KS-like instability proxy is elevated (median fold ≈ 8.96 over tumor core);
-and the KTS analysis shows a strong exhaustion-directed transition bias.
+The coexact component is not reducible to a gradient — enrichment observed in 40/40 TNBC sections and the majority of GSE278936 sections (verify exact count against `cohort_summary.csv`). Graph-Laplacian curvature is higher; KS-like instability is elevated (median fold ≈ 8.96 over tumor core); KTS analysis shows a strong exhaustion-directed transition bias.
 
-**Analogy:** Constrained, curvature-driven boundary dynamics where gradients fail
-and operator-level constraints govern the field.
-**Operator signature:** High coexact energy or coexact/exact ratio (when exact energy is available), high graph curvature, high CDIS,
-KTS exhaustion bias.
+| Property | Value |
+|---|---|
+| Analogy | Constraint-driven boundary dynamics where gradients fail |
+| Operator signature | High coexact energy (or coexact/exact ratio when available), high graph curvature, high CDIS, KTS exhaustion bias |
 
-### The analogies are operator-level, not mechanistic
+### On the analogies
 
-The Maxwell–Boltzmann reference characterizes the bulk as a near-equilibrium
-baseline against which the interface deviates. Euler–Bernoulli is used only as an analogy for constraint-dominated boundary behavior and is not a mechanistic claim; it characterizes the interface as a regime where boundary conditions and local program opposition govern dynamics in operator terms. **These are operator analogies.**
-The claim is that the two regimes have formally different operator signatures —
-not that tumor tissue literally obeys these physical equations.
+The Maxwell–Boltzmann reference characterizes the bulk as a near-equilibrium baseline. Euler–Bernoulli is used only as an analogy for constraint-dominated boundary behavior — it is not a mechanistic claim. **The claim is that the two regimes have formally different operator signatures, not that tumor tissue literally obeys these equations.**
 
 ---
 
@@ -71,239 +52,241 @@ not that tumor tissue literally obeys these physical equations.
 
 ```
 scripts_gse278936/
-├── step15_regime_assignment.py          Classify nodes into operator regimes
-├── step16_operator_regime_metrics.py    Compute per-regime operator summaries
-├── step17_two_regime_test.py            Permutation test: interface vs bulk
-├── step18_bulk_equilibrium_null.py      Bulk-matched null: near-equilibrium baseline
-├── step19_constraint_regime_score.py    CDIS: composite constraint-dominated score
-├── step20_interface_targeting_principles.py  Therapeutic hypothesis table
-├── step21_pre_post_therapy_template.py  Pre/post treatment response template [PROSPECTIVE TEMPLATE — not used as evidence unless paired treatment data are provided]
-├── step22_regime_summary_table.py       Manuscript-ready two-regime model table
-└── README_Interface_Regime_Pipeline.md  This file
+├── step15_regime_assignment.py              Classify nodes into operator regimes
+├── step16_operator_regime_metrics.py        Compute per-regime operator summaries
+├── step17_two_regime_test.py                Permutation test: interface vs bulk
+├── step18_bulk_equilibrium_null.py          Bulk-matched null: near-equilibrium baseline
+├── step19_constraint_regime_score.py        CDIS composite constraint-dominated score
+├── step20_interface_targeting_principles.py Therapeutic hypothesis table
+├── step21_pre_post_therapy_template.py      Pre/post treatment response [PROSPECTIVE ONLY]
+├── step22_regime_summary_table.py           Manuscript-ready two-regime model table
+├── step23a_power_spectrum_test.py           Power spectrum shape [EXPERIMENTAL]
+├── step23b_local_vs_global_prediction.py    Local vs global predictability [EXPERIMENTAL]
+├── step23c_spatial_autocorrelation.py       Spatial ACF shape [EXPERIMENTAL]
+└── README_Interface_Regime_Pipeline.md      This file
 ```
 
-**Prerequisites:** Steps 01–14 of the main pipeline must be completed first.
-Specifically: spots_coexact_energy.csv, edges_hodge.csv, and (for KTS analyses)
-the kts_transition_bias outputs must exist.
+**Prerequisites:** Steps 01–14 of the main pipeline must be completed first. Required inputs: `*_spots_coexact_energy.csv`, `*_edges_hodge.csv`, and (for KTS analyses) `kts_transition_bias` outputs.
 
 ---
 
 ## Step-by-Step Reference
 
 ### Step 15 — Regime Assignment
-Classifies each spot into: `bulk_like`, `interface_like`, `interface_adjacent`,
-`stromal_like`, `immune_like`, `other`.
 
-Classification logic:
-- `bulk_like`: tumor_core region AND coexact_energy < section Q50
-- `interface_adjacent`: tumor_core region AND coexact_energy ≥ section Q50
-- `interface_like`: interface/interface_like annotated region
-- `stromal_like`, `immune_like`: stroma/immune annotated regions
+Classifies each spot into one of five operator regimes.
 
-**Key distinction:** `bulk_like` nodes are the near-equilibrium reference.
-`interface_adjacent` nodes are in the tumor core but carry elevated coexact energy.
+| Regime | Classification logic |
+|---|---|
+| `bulk_like` | tumor_core region AND coexact_energy < section Q50 |
+| `interface_adjacent` | tumor_core region AND coexact_energy ≥ section Q50 |
+| `interface_like` | interface/interface_like annotated region |
+| `stromal_like` | stroma annotated region |
+| `immune_like` | immune annotated region |
+
+`bulk_like` nodes serve as the near-equilibrium reference. `interface_adjacent` nodes are in the tumor core but carry elevated coexact energy.
 
 ```bash
 python scripts_gse278936/step15_regime_assignment.py \
   --statsdir results_gse278936 \
-  --outdir results_interface_regime \
+  --outdir   results_interface_regime \
   --coexact-bulk-q 0.50
 ```
-Output: `{sid}_regime_assignment.csv`
+
+**Output:** `{sid}_regime_assignment.csv`
 
 ---
 
-### Pre-Step 16 — Copy required files into working directory
+### ⚠ Pre-Step 16 — Copy required files
 
-Step 16 requires both the regime assignment files (from Step 15) and the
-original spots/edges files in the same `--statsdir`. Copy them before running:
+Step 16 requires both the regime assignment files (from Step 15) **and** the original spots/edges files in the same directory. Copy them before running:
 
 ```bash
 mkdir -p results_interface_regime
 
-# Copy from main GSE278936 pipeline outputs
-cp results_gse278936/*_spots_coexact_energy.csv results_interface_regime/
-cp results_gse278936/*_edges_hodge.csv results_interface_regime/
-# Step 15 writes regime_assignment files to results_interface_regime/ directly
+cp Results_TNBC_rebuild_gse278936/*_spots_coexact_energy.csv results_interface_regime/
+cp Results_TNBC_rebuild_gse278936/*_edges_hodge.csv          results_interface_regime/
+# Step 15 already wrote regime_assignment files to results_interface_regime/
 ```
 
-This was the source of the "missing inputs" error when running Step 16
-immediately after Step 15 without the original spots/edges files present.
+> This was the source of the "missing inputs" error when running Step 16 immediately after Step 15 without the original spots/edges files present.
 
 ---
 
 ### Step 16 — Operator Regime Metrics
-For each section, computes per-regime medians of:
-- `coexact_energy` — non-gradient interaction intensity
-- `exact_energy_node` — gradient component (baseline)
-- `coexact_exact_ratio` — non-gradient dominance ratio
-- `graph_curvature` — |Lu| (Laplacian applied to coexact field)
-- `bilaplacian_mag` — |L²u| (higher-order stabilizing structure)
-- `nonlin_grad_energy` — squared edge differences per node
+
+Computes per-regime medians of six operator metrics for each section.
+
+| Metric | Description |
+|---|---|
+| `coexact_energy` | Non-gradient interaction intensity |
+| `exact_energy_node` | Gradient component (baseline) |
+| `coexact_exact_ratio` | Non-gradient dominance ratio |
+| `graph_curvature` | \|Lu\| — Laplacian applied to coexact field |
+| `bilaplacian_mag` | \|L²u\| — higher-order stabilizing structure |
+| `nonlin_grad_energy` | Squared edge differences per node |
 
 ```bash
-python scripts_gse278936/step16_operator_regime_metrics.py 
---statsdir results_interface_regime\
---outdir results_interface_regime
+python scripts_gse278936/step16_operator_regime_metrics.py \
+  --statsdir results_interface_regime \
+  --outdir   results_interface_regime
 ```
-Output: `{sid}_operator_regime_metrics.csv`, `cohort_operator_regime_summary.csv`
+
+**Outputs:** `{sid}_operator_regime_metrics.csv`, `cohort_operator_regime_summary.csv`
 
 ---
 
 ### Step 17 — Two-Regime Permutation Test
-Tests whether interface-like nodes differ from bulk-like nodes in three
-primary metrics (always tested) and one conditional metric:
 
-**Primary metrics (always tested):**
+Tests whether interface-like nodes differ from bulk-like nodes using a node-count-matched random subsample from bulk-like nodes as null. One-sided p-value: fraction of null medians ≥ observed interface median.
+
+**Primary metrics** (always tested):
+
 1. `coexact_energy` — non-gradient interaction intensity
-2. `graph_curvature` — |Lu| (Laplacian applied to coexact field)
-3. `ks_like` — |−Lu − L²u − |∇u|²| (KS-like instability proxy)
+2. `graph_curvature` — \|Lu\|
+3. `ks_like` — \|−Lu − L²u − \|∇u\|²\|
 
-**Conditional metric (tested only when flux_exact is available):**
-4. `coexact_exact_ratio` — non-gradient dominance ratio
+**Conditional metric** (only when `flux_exact` is available):
 
-The output CSV includes a `primary_metric` boolean column and an `exact_available`
-column for transparency.
+4. `coexact_exact_ratio`
 
-Null model: node-count-matched random subsample from bulk-like nodes.
-One-sided p-value: fraction of null medians ≥ observed interface median.
+The output CSV includes `primary_metric` (boolean) and `exact_available` columns for transparency.
 
 ```bash
 python scripts_gse278936/step17_two_regime_test.py \
   --statsdir results_interface_regime \
-  --outdir results_interface_regime \
+  --outdir   results_interface_regime \
   --n-perm 300 --seed 123
 ```
-Output: `cohort_two_regime_test.csv`
+
+**Output:** `cohort_two_regime_test.csv`
 
 **GSE278936 result (n = 23 sections):**
-Interface-like nodes significantly exceeded bulk-like nodes on all three primary metrics
-in 23/23 sections (p < 0.05 each):
-- Coexact energy fold ≈ 6.38×
-- Graph curvature fold ≈ 9.68×
-- KS-like magnitude fold ≈ 17.84×
 
-The conditional coexact/exact ratio was significant in 22/23 sections.
+| Metric | Fold over bulk | Sections significant |
+|---|---|---|
+| Coexact energy | 6.38× | 23/23 |
+| Graph curvature | 9.68× | 23/23 |
+| KS-like magnitude | 17.84× | 23/23 |
+| Coexact/exact ratio (conditional) | — | 22/23 |
 
 ---
 
-### Step 18 — Bulk Equilibrium Null Model
-Treats bulk-like nodes as the near-equilibrium reference distribution.
-Bootstrapped comparison of interface vs bulk in coexact_energy and ks_like.
+### Step 18 — Bulk Equilibrium Null
 
-Tests whether interface nodes significantly exceed what a bulk-matched
-random sample would produce — confirming that the interface constitutes a
-distinct operator regime, not a continuous gradient above the bulk.
+Bootstraps from bulk-like nodes to construct a reference distribution for "near-equilibrium" behavior. Interface nodes are tested against this distribution to confirm they constitute a structurally distinct regime — not merely a high-energy random subset.
 
 ```bash
 python scripts_gse278936/step18_bulk_equilibrium_null.py \
   --statsdir results_interface_regime \
-  --outdir results_interface_regime \
+  --outdir   results_interface_regime \
   --n-perm 300 --seed 123
 ```
-Output: `cohort_bulk_vs_interface_null.csv`
 
-**GSE278936 result (n = 23 sections):**
-The bulk equilibrium null was rejected in 23/23 sections for both metrics:
-- Coexact energy: median interface/bulk fold ≈ 5.48×
-- KS-like instability: median interface/bulk fold ≈ 19.54×
-- Sign test p = 1.19 × 10⁻⁷
+**Output:** `cohort_bulk_vs_interface_null.csv`
 
-This rules out the explanation that interface nodes are simply a high-energy
-random subset of the tissue; they constitute a structurally distinct regime.
+**GSE278936 result (n = 23 sections, all significant):**
+
+| Metric | Median interface/bulk fold | Sign test p |
+|---|---|---|
+| Coexact energy | 5.48× | 1.19 × 10⁻⁷ |
+| KS-like instability | 19.54× | 1.19 × 10⁻⁷ |
 
 ---
 
 ### Step 19 — Constraint-Dominated Interface Score (CDIS)
-CDIS uses a **conditional formula** with **robust z-scores** (median-centered, IQR-scaled):
 
-- When exact energy is available: `CDIS = rz(coexact/exact) + rz(|L²u|) + rz(nonlin_grad)`
-- When exact energy is unavailable: `CDIS = rz(coexact_energy) + rz(|L²u|) + rz(nonlin_grad)`
+Combines three operator metrics into a composite score using **robust z-scores** (median-centered, IQR-scaled) to prevent outlier inflation from extreme right-skewed distributions.
 
-Robust z-scores are used to prevent outlier inflation from the extreme right-skewed ratio distributions. The formula used is written to the `cdis_formula` column for auditability.
+**Formula (conditional):**
 
-Combines three orthogonal operator metrics into a single composite score.
-CDIS is a **within-section configuration score**, not an absolute biological magnitude.
-It tests whether interface nodes occupy an operator-space regime distinct from bulk-like nodes.
-A positive interface–bulk gap means interface nodes consistently exceed the bulk on the
-combined constraint-dominated operator signature.
+| Condition | Formula |
+|---|---|
+| `flux_exact` available | `CDIS = rz(coexact/exact) + rz(\|L²u\|) + rz(nonlin_grad)` |
+| `flux_exact` unavailable | `CDIS = rz(coexact_energy) + rz(\|L²u\|) + rz(nonlin_grad)` |
 
-Tests CDIS enrichment at interface vs bulk using permutation null.
-Reports cohort-level sign test.
+The formula used is written to the `cdis_formula` column for auditability.
+
+CDIS is a **within-section configuration score**, not an absolute biological magnitude. A positive interface–bulk gap means interface nodes consistently occupy a more constraint-dominated region of operator space than bulk nodes.
 
 ```bash
 python scripts_gse278936/step19_constraint_regime_score.py \
   --statsdir results_interface_regime \
-   --outdir results_interface_regime \
+  --outdir   results_interface_regime \
   --n-perm 300 --seed 123
 ```
-Outputs: `{sid}_constraint_score.csv`, cohort_constraint_score_summary.csv | Step 19 — includes cdis_formula for CDIS auditability
 
-**GSE278936 result (n = 23 sections):**
-CDIS identified a distinct constraint-dominated interface regime in 22/23 sections
-(sign test p = 2.86 × 10⁻⁶):
-- Median interface CDIS = +6.09
-- Median bulk CDIS = −0.17
-- Median interface–bulk gap = +6.07 (IQR 5.14–8.17)
+**Outputs:** `{sid}_constraint_score.csv`, `cohort_constraint_score_summary.csv`
 
-GSM8558019 was the only non-significant section and had only 6 bulk-like nodes, limiting the stability of the bulk estimate. It is therefore treated as a low-power section rather than evidence against the cohort-level effect.
+**GSE278936 result (22/23 sections significant, sign test p = 2.86 × 10⁻⁶):**
+
+| Statistic | Value |
+|---|---|
+| Median interface CDIS | +6.09 |
+| Median bulk CDIS | −0.17 |
+| Median interface–bulk gap | +6.07 (IQR 5.14–8.17) |
+
+> **Note:** GSM8558019 was the only non-significant section and had only 6 bulk-like nodes — the bulk estimate is statistically unreliable at this sample size, not a biological reversal.
 
 ---
 
 ### Step 20 — Therapeutic Hypothesis Table
-Outputs four formal therapeutic principles as a structured CSV with:
-- Evidence tier (Tier 2 = operator inference; Tier 3 = speculative)
-- Supporting metric
-- Operator prediction (falsifiable)
-- Required validation experiment
 
-**This script generates formal targeting hypotheses, not clinical recommendations. It was not used as therapeutic evidence.**
+Outputs four formal therapeutic principles as a structured CSV. Each entry includes evidence tier, supporting metric, falsifiable operator prediction, and required validation experiment.
+
+> **This script generates formal targeting hypotheses, not clinical recommendations. It was not used as therapeutic evidence.**
 
 ```bash
-python scripts_gse278936/step20_interface_targeting_principles.py --outdir results_interface_regime
+python scripts_gse278936/step20_interface_targeting_principles.py \
+  --outdir results_interface_regime
 ```
-Output: `interface_targeting_principles.csv`
+
+**Output:** `interface_targeting_principles.csv`
 
 ---
 
 ### Step 21 — Pre/Post Therapy Response Template
-Computes Delta metrics between paired pre/post-treatment sections:
-- Δcoexact_exact_ratio (Principle 3 prediction: should decrease)
-- Δks_like (instability reduction)
-- ΔCDIS (constraint regime exit)
-- ΔKTS exhaustion bias (transition dynamics change)
+
+Computes signed Delta metrics (post − pre) at the interface region for paired treatment samples.
+
+| Metric | Therapeutic prediction |
+|---|---|
+| Δcoexact_exact_ratio | Should decrease (Principle 3) |
+| Δks_like | Instability reduction |
+| ΔCDIS | Constraint regime exit |
+| ΔKTS exhaustion bias | Transition dynamics change |
 
 ```bash
 python scripts_gse278936/step21_pre_post_therapy_template.py \
   --pre-id  GSM_pre_treatment_ID \
   --post-id GSM_post_treatment_ID \
   --statsdir results_paired \
-  --outdir results_interface_regime \
-  --label   "Patient_01_anti_VEGF"
+  --outdir   results_interface_regime \
+  --label    "Patient_01_anti_VEGF"
 ```
-Output: `paired_response_metrics.csv`
 
-> **Step 21 is a prospective paired-sample template only.** It should not be
-> cited as evidence unless true paired pre/post-treatment samples are provided.
-> No paired treatment data were used in the current study.
+**Output:** `paired_response_metrics.csv`
+
+> **Step 21 is a prospective paired-sample template only.** It should not be cited as evidence unless true paired pre/post-treatment samples are provided. No paired treatment data were used in the current study.
 
 ---
 
 ### Step 22 — Regime Summary Table
-Generates the manuscript-ready two-regime model table with all layers,
-metrics, TNBC and GSE278936 results, operator interpretations, and
-analogy notes. Includes the global safety statement.
+
+Generates the manuscript-ready two-regime model table: all layers, metrics, TNBC and GSE278936 results, operator interpretations, analogy notes, and global safety statement.
 
 ```bash
-python scripts_gse278936/step22_regime_summary_table.py --outdir results_interface_regime
+python scripts_gse278936/step22_regime_summary_table.py \
+  --outdir results_interface_regime
 ```
-Output: `table_two_regime_model.csv`
+
+**Output:** `table_two_regime_model.csv`
 
 ---
 
 ## Expected Outputs
 
-| File | Source step |
+| File | Source |
 |---|---|
 | `{sid}_regime_assignment.csv` | Step 15 |
 | `{sid}_operator_regime_metrics.csv` | Step 16 |
@@ -311,63 +294,71 @@ Output: `table_two_regime_model.csv`
 | `cohort_two_regime_test.csv` | Step 17 |
 | `cohort_bulk_vs_interface_null.csv` | Step 18 |
 | `{sid}_constraint_score.csv` | Step 19 |
-| `cohort_constraint_score_summary.csv` | Step 19 |
+| `cohort_constraint_score_summary.csv` | Step 19 (includes `cdis_formula` column) |
 | `interface_targeting_principles.csv` | Step 20 |
 | `paired_response_metrics.csv` | Step 21 |
-| `cohort_constraint_score_summary.csv` (with `cdis_formula` column) | Step 19 — for auditability of CDIS formula used per cohort |
 | `table_two_regime_model.csv` | Step 22 |
 
 ---
 
 ## Batch Execution
 
-mkdir -p results_interface_regime
-
+```bash
+# Step 1: Assign regimes
 python scripts_gse278936/step15_regime_assignment.py \
   --statsdir results_gse278936 \
-  --outdir results_interface_regime \
+  --outdir   results_interface_regime \
   --coexact-bulk-q 0.50
 
-cp results_gse278936/*_spots_coexact_energy.csv results_interface_regime/
-cp results_gse278936/*_edges_hodge.csv results_interface_regime/
+# Step 2: Copy spots/edges files into the working directory
+mkdir -p results_interface_regime
+cp Results_TNBC_rebuild_gse278936/*_spots_coexact_energy.csv results_interface_regime/
+cp Results_TNBC_rebuild_gse278936/*_edges_hodge.csv          results_interface_regime/
 
+# Steps 3–8: Core two-regime analyses
 STATSDIR=results_interface_regime
 
-python scripts_gse278936/step16_operator_regime_metrics.py  --statsdir $STATSDIR --outdir $STATSDIR
-python scripts_gse278936/step17_two_regime_test.py          --statsdir $STATSDIR --outdir $STATSDIR --n-perm 300 --seed 123
-python scripts_gse278936/step18_bulk_equilibrium_null.py    --statsdir $STATSDIR --outdir $STATSDIR --n-perm 300 --seed 123
-python scripts_gse278936/step19_constraint_regime_score.py  --statsdir $STATSDIR --outdir $STATSDIR --n-perm 300 --seed 123
-python scripts_gse278936/step20_interface_targeting_principles.py --outdir $STATSDIR
-python scripts_gse278936/step22_regime_summary_table.py     --outdir $STATSDIR
+python scripts_gse278936/step16_operator_regime_metrics.py \
+  --statsdir $STATSDIR --outdir $STATSDIR
 
+python scripts_gse278936/step17_two_regime_test.py \
+  --statsdir $STATSDIR --outdir $STATSDIR --n-perm 300 --seed 123
 
-# For paired samples (requires post-treatment data):
+python scripts_gse278936/step18_bulk_equilibrium_null.py \
+  --statsdir $STATSDIR --outdir $STATSDIR --n-perm 300 --seed 123
+
+python scripts_gse278936/step19_constraint_regime_score.py \
+  --statsdir $STATSDIR --outdir $STATSDIR --n-perm 300 --seed 123
+
+python scripts_gse278936/step20_interface_targeting_principles.py \
+  --outdir $STATSDIR
+
+python scripts_gse278936/step22_regime_summary_table.py \
+  --outdir $STATSDIR
+
+# Optional: paired treatment samples only
 python scripts_gse278936/step21_pre_post_therapy_template.py \
   --pre-id  PRE_SAMPLE_ID \
   --post-id POST_SAMPLE_ID \
   --statsdir results_paired \
-  --label   "Patient_01_Treatment"
+  --label    "Patient_01_Treatment"
 ```
 
 ---
 
 ## Reproducibility
 
-All stochastic steps use `--seed 123` as the default.
+All stochastic steps use `--seed 123`. Results are fully deterministic given a fixed seed.
 
-**Class-imbalance caveat:** Some sections contain small bulk-like node sets
-(n < 10). Permutation tests preserve group sizes, ensuring valid inference
-under class imbalance. Sections with n_bulk < 10 should be interpreted with
-caution; Step 19 flags these in the `status` column. GSM8558019 (n_bulk = 6)
-is the canonical example in the GSE278936 cohort. Results are
-deterministic given fixed seed. All steps are independent of each other
-except for the dependency chain:
+**Class-imbalance caveat:** Some sections have small bulk-like node sets (n < 10). Permutation tests preserve group sizes, so inference remains valid, but sections with `n_bulk < 10` should be interpreted with caution. Step 19 flags these in the `status` column. GSM8558019 (n_bulk = 6) is the canonical example in the GSE278936 cohort.
+
+**Dependency chain:**
 
 ```
 Step 15 → Step 16 → Step 17
 Step 15 → Step 18
 Step 15 + Step 16 → Step 19
-Step 19 + optional KTS outputs + paired pre/post sample IDs → Step 21
+Step 19 + optional KTS outputs + paired sample IDs → Step 21
 Steps 17–19 → Step 22
 ```
 
@@ -375,111 +366,68 @@ Steps 17–19 → Step 22
 
 ## Step 23 Extensions (Experimental)
 
-Step23a preliminary output may classify sections as PERIODIC; therefore Step23 results should not be used to support an aperiodic-organization claim unless Steps23b–c and final summaries justify it. Current Step23 analyses remain exploratory and excluded from the core manuscript claim.
+> Step 23 results are **experimental** and **not part of the core two-regime evidence chain** (Steps 17–19). They should be reported separately and labeled as exploratory until fully validated.
 
-| Script | Tests | Status |
+| Script | What it tests | Status |
 |---|---|---|
-| `step23a_power_spectrum_test.py` | Spectral shape (periodic vs random vs aperiodic) | Experimental |
-| `step23b_local_vs_global_prediction.py` | Local rule vs global template prediction | Experimental |
-| `step23c_spatial_autocorrelation.py` | ACF shape (monotone decay vs oscillation) | Experimental |
+| `step23a_power_spectrum_test.py` | Spectral shape: periodic vs random vs aperiodic candidate | Experimental |
+| `step23b_local_vs_global_prediction.py` | Local neighborhood vs global spectral predictability | Experimental |
+| `step23c_spatial_autocorrelation.py` | ACF shape: monotone decay vs oscillation | Experimental |
 
-Run after Steps 15–19. Results should be reported separately from the
-core two-regime evidence (Steps 17–19) and labeled as exploratory.
+Run after Steps 15–19. Use the same `--statsdir results_interface_regime`.
 
-Step 23 — Local Constraint Structure versus Global Spectral Organization
+### Step 23a — Power Spectrum Shape
 
-To investigate whether the tumor–immune interface exhibits globally periodic organization or instead behaves as a locally constrained but globally non-periodic interaction regime, three complementary analyses were performed.
+Tests whether the coexact field's graph power spectrum has dominant global frequencies (periodic) or is continuous without peaks (aperiodic candidate). Most sections showed strong low-frequency spectral concentration; however, the coexact field was not consistently less peaked than the exact field (9/23 sections), so spectral peak analysis alone is insufficient to characterize the interface as globally aperiodic.
 
-Step23a — Power spectrum analysis
+### Step 23b — Local vs Global Predictability
 
-The first analysis examined the spectral structure of the coexact field using graph-frequency power spectra. The hypothesis tested was whether the interface contains dominant global frequencies characteristic of periodic organization.
+Compares local neighborhood prediction (k-hop means) against global spectral reconstruction (top-k eigenmodes). Across all 23/23 sections, local reconstruction substantially outperformed global spectral reconstruction:
 
-Most sections displayed strong low-frequency spectral concentration, producing high peak ratios and Gini coefficients. However, this result alone was insufficient to distinguish true periodic organization from smooth constrained spatial fields, since low-frequency enrichment can arise in any spatially coherent biological structure.
+| Metric | Value |
+|---|---|
+| Median best local R² | 0.637 |
+| Median global spectral R² | 0.077 |
+| Median local–global gap | +0.561 |
+| Sign test p | 1.19 × 10⁻⁷ |
 
-Importantly, the spectral test showed that the coexact field was not consistently less peaked than the exact field (9/23 sections), indicating that spectral peak analysis alone cannot characterize the interface as globally aperiodic.
+This demonstrates that coexact interface organization is **highly locally predictable but poorly globally compressible** — inconsistent with a globally periodic lattice, and inconsistent with random noise.
 
-Step23b — Local versus global predictability
+### Step 23c — Spatial Autocorrelation
 
-To directly test whether interface organization is governed by local interaction rules or by globally coherent modes, predictive reconstruction analyses were performed.
+Spatial autocorrelation functions (ACF) characterize the form of spatial organization. Most sections (17/23) displayed positive short-range autocorrelation with monotone decay and no oscillatory recurrence — finite-range constrained organization without long-range periodicity.
 
-Local neighborhood models were compared against global spectral reconstructions for prediction of coexact operator structure.
+| Statistic | Value |
+|---|---|
+| Median lag-1 ACF | 0.482 |
+| Median decay length τ | 1.47 graph hops |
+| Sign test p | 0.017 |
 
-Across all 23/23 sections, local reconstruction substantially outperformed global spectral reconstruction:
+### Step 23 Interpretation
 
-* Median best local R² = 0.637
-* Median global spectral R² = 0.077
-* Median local-global gap = +0.561
-* Sign test: p = 1.19 × 10⁻⁷
+The three analyses together support a **locally constrained, globally weakly coherent** interface regime. The coexact interaction structure is strongly determined by local neighborhood geometry and propagates over finite spatial ranges, but is not reducible to globally periodic spectral organization.
 
-This result demonstrates that coexact interface organization is highly locally predictable but poorly globally compressible.
-
-The interface therefore does not behave like:
-
-* a globally periodic lattice (high global coherence), nor
-* random spatial noise (low local predictability),
-
-but instead resembles a constrained interaction regime generated by local spatial rules without globally repeating structure.
-
-Step23c — Spatial autocorrelation decay
-
-Spatial autocorrelation functions (ACF) were then computed to characterize the form of spatial organization directly.
-
-Most sections (17/23) displayed:
-
-* positive short-range autocorrelation,
-* monotone decay with distance,
-* absence of oscillatory recurrence,
-* finite correlation lengths.
-
-Median lag-1 autocorrelation was 0.482, with median decay length τ = 1.47 graph hops (p = 0.017).
-
-This behavior is incompatible with:
-
-* white-noise randomness (near-zero autocorrelation),
-* or strong periodic lattices (oscillatory autocorrelation with recurring peaks).
-
-Instead, the interface exhibits finite-range constrained organization without long-range periodic repetition.
-
-Interpretation
-
-Together, these analyses support the conclusion that the tumor–immune interface behaves as a locally constrained, globally weakly coherent operator regime.
-
-The coexact interaction structure:
-
-* is strongly determined by local neighborhood geometry,
-* propagates over finite spatial ranges,
-* but is not reducible to globally periodic spectral organization.
-
-This places the interface in a distinct regime between:
-
-* passive equilibrium diffusion,
-* and purely random heterogeneity.
-
-Rather than behaving as a passive mixing boundary, the interface appears to constitute a constraint-dominated nonequilibrium interaction manifold whose structure emerges from local operator interactions rather than global equilibrium geometry.
-
-Step23 extends the operator-regime framework by demonstrating that tumor–immune interfaces are locally structured yet globally weakly coherent, consistent with constrained nonequilibrium organization rather than periodic equilibrium structure.
-
+> **Important caveat:** Step 23a preliminary output may classify some sections as PERIODIC. Step 23 results should not be used to support an aperiodic-organization claim unless Step 23b–c results and final summaries jointly justify it.
 
 ---
 
 ## Relationship to Main Manuscript
 
-The two-regime framework and associated therapeutic principles are discussed in the manuscript Discussion section (“Two dynamical regimes and therapeutic implications”). The present pipeline provides the computational and operator-theoretic substrate for those claims.
+The two-regime framework and associated therapeutic principles are discussed in the manuscript Discussion section ("Two dynamical regimes and therapeutic implications"). This pipeline is the computational substrate for those claims.
 
-The analyses collectively support a two-regime organization of the tissue:
+The analyses support a two-regime tissue organization:
 
-1. a bulk-like regime characterized by lower coexact activity and greater equilibrium-like behavior, and
-2. a tumor–immune interface regime characterized by elevated coexact interaction structure, high KS-like instability, enhanced operator constraint dominance (CDIS), and locally structured but globally weakly coherent organization.
+1. **Bulk-like regime** — lower coexact activity, greater equilibrium-like behavior
+2. **Interface regime** — elevated coexact interaction, high KS-like instability, enhanced operator constraint dominance (CDIS), locally structured but globally weakly coherent organization
 
-Step23 further refines this interpretation by showing that interface organization is strongly locally predictable yet poorly captured by global spectral modes. Spatial autocorrelation analyses demonstrate finite-range constrained organization without strong long-range periodicity, supporting the interpretation of the interface as a constrained nonequilibrium interaction regime rather than a passive mixing boundary.
+Step 23 further refines this interpretation by demonstrating that interface organization is strongly locally predictable yet poorly captured by global spectral modes — consistent with a constrained nonequilibrium interaction regime rather than a passive mixing boundary.
 
-The therapeutic principles generated from this framework are therefore mechanistic hypotheses derived from operator organization and regime structure. They are not clinical recommendations. The pipeline explicitly enforces this distinction through evidence-tier classification in Step20.
+All therapeutic principles are mechanistic hypotheses derived from operator organization and regime structure. They are not clinical recommendations. The pipeline enforces this distinction through evidence-tier classification in Step 20.
 
-Overall, the results support the interpretation that tumor–immune interfaces constitute distinct constraint-dominated operator regimes whose dynamics cannot be reduced to passive diffusion, random heterogeneity, or globally periodic equilibrium structure.
 ---
 
 ## Author
 
-Anas Enoch, MD
-Mohammed VI University of Health Sciences (UM6SS), Casablanca
+**Anas Enoch, MD**  
+Mohammed VI University of Health Sciences (UM6SS), Casablanca  
 anas_nour@um5.ac.ma

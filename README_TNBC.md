@@ -2,7 +2,7 @@
 
 **Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis**  
 Anas Enoch, MD · Mohammed VI University of Health Sciences (UM6SS), Casablanca  
-Target journal: *Bioinformatics Advances* (Oxford) · Submission BIOINF-2026-0777
+
 
 ---
 

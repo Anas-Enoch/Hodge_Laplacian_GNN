@@ -63,7 +63,18 @@ Hodge_Laplacian_GNN/
 ├── scripts_cosmx/
 │   └── CosMx single-cell spatial transcriptomics validation pipeline.
 │
-├── spatial_hallmark/ biological-validation and baseline-comparison layer.
+├── spatial_hallmark/
+│   ├── build_biological_validation.py
+│   ├── build_spatial_hallmarks_kts_edges.py
+│   ├── baseline_comparison.py
+│   └── results_spatial_hallmarks/
+│       ├── spatial_hallmarks_hodge_interface.csv
+│       ├── spatial_hallmarks_kts_edges.csv
+│       ├── tier1_module_correlation.csv
+│       ├── tier2_exhaustion_endpoint.csv
+│       ├── tier3_stromal_mediation.csv
+│       ├── results_baseline_comparison.csv
+│       └── baseline_comparison.png
 │ 
 |── results_interface_regime/ Location: scripts_gse278936/step15 to step23c
 │
@@ -73,10 +84,11 @@ Hodge_Laplacian_GNN/
 ├── results_cosmx/
 │   └── CosMx enrichment outputs (already included for reproducibility).
 │
-└── Results_TNBC_rebuild/
-└── Results_gse278936/ 
-        Curated final CSV outputs for both the GSE278936 validation and the
-        corrected TNBC rebuild — the primary reproducibility directory.
+└── results_gse278936/
+│   └── Curated GSE278936 validation outputs.
+│
+├── results_tnbc_rebuild/
+│   └── Corrected TNBC rebuild outputs.
         Key files:
           cohort_summary.csv
           cohort_zeta_energy_matched_null.csv
@@ -88,6 +100,59 @@ Hodge_Laplacian_GNN/
 
 Raw datasets are not stored in the repository. Public accession links are provided below.
 
+---
+
+## Installation
+
+### Option A — Conda
+
+```bash
+conda env create -f environment.yml
+conda activate hodge-operator
+```
+
+### Option B — pip
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+If `environment.yml` or `requirements.txt` are not present in a lightweight branch, install the core stack manually:
+
+```bash
+pip install numpy pandas scipy scikit-learn networkx scanpy anndata matplotlib tqdm
+```
+
+---
+
+## Data requirements
+
+| Dataset | Platform | Role |
+|---|---|---|
+| GSE210616 | 10x Visium / TNBC | Discovery cohort |
+| GSE278936 | 10x Visium / prostate cancer | External validation |
+| CosMx breast multiomic data | CosMx SMI | Cross-technology validation |
+| Spatial hallmarks cohort | Visium pan-cancer | Biological validation and baseline comparison |
+
+Raw data are not stored in this repository. Large derived `.h5ad` files and dense edge tables should be regenerated from the documented pipelines or distributed through release/archival assets when needed.
+
+---
+
+## Pipeline documentation
+
+Detailed cohort-level documentation is provided in:
+
+| File | Purpose |
+|---|---|
+| `TNBC_pipeline.md` | TNBC discovery and corrected rebuild pipeline |
+| `GSE278936_pipeline.md` | GSE278936 external validation |
+| `CosMx_external_validation.md` | Cross-technology CosMx validation |
+| `Interface_Regime_pipeline.md` | Interface-regime and constraint analyses |
+| `Spatial_Hallmarks_validation.md` | Biological validation and baseline comparison |
+
+These files should be read as cohort-specific reproducibility guides.
 ---
 
 ## Pipelines
@@ -262,14 +327,46 @@ source .venv/bin/activate
 pip install -r requirements.txt
 # or: pip install numpy pandas scipy scikit-learn matplotlib networkx tqdm scanpy
 ```
+---
+## Large-file policy
 
+This repository intentionally avoids treating massive intermediate files as ordinary source code.
+
+Large files such as:
+
+- `.h5ad` objects;
+- dense edge tables;
+- high-resolution figure dumps;
+- per-section intermediate arrays;
+
+should either be:
+
+1. regenerated from scripts,
+2. stored as GitHub release assets,
+3. stored in Zenodo/Figshare/Hugging Face datasets,
+4. or kept locally when not manuscript-critical.
+
+Manuscript-critical summary CSVs and final benchmark outputs may remain tracked when they are needed for reproducibility.
 ---
 
 ## Citation
 
+If you use this framework, please cite:
 
-> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.
-=======
-> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.* 
+```bibtex
+@article{enoch2026nonpassive,
+  author  = {Enoch, Anas},
+  title   = {Non-passive transport organization at tumour--immune interfaces revealed by operator-based analysis},
+  year    = {2026},
+  note    = {Manuscript under submission}
+}
+```
 
-> Bassiouni R et al. *Spatial Transcriptomic Analysis of a Diverse Patient Cohort Reveals a Conserved Architecture in Triple-Negative Breast Cancer.* Cancer Research 83(1):34–48, 2023. GEO: GSE210616.
+---
+
+## Contact
+
+**Anas Enoch, MD**  
+Mohammed VI University of Health Sciences (UM6SS), Casablanca, Morocco  
+GitHub: [@Anas-Enoch](https://github.com/Anas-Enoch)  
+Repository: [Hodge_Laplacian_GNN](https://github.com/Anas-Enoch/Hodge_Laplacian_GNN)

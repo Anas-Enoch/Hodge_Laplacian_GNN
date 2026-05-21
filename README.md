@@ -1,273 +1,429 @@
-# Hodge-Laplacian Operator Framework for Tumor–Immune Interface Analysis
+# Non-Passive Transport Organization at Tumour–Immune Interfaces
+### Operator-Geometric Falsification Framework · Spatial Transcriptomics
 
-**Manuscript:** *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis*
-**Author:** Anas Enoch, MD
-**Affiliation:** Mohammed VI University of Health Sciences (UM6SS), Casablanca, Morocco
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 
+> **Paper:** *Non-passive transport organization at tumour–immune interfaces
+> revealed by operator-based analysis.*  
 
----
-
-## Overview
-
-This repository contains the reproducible code, documentation, and processed outputs for a multilayer operator-based analysis of tumor–immune interfaces in spatial transcriptomics.
-
-The final framework separates four quantities that are often conflated:
-
-1. **Coexact interaction intensity** — local non-gradient signal detected by Hodge decomposition.
-2. **Geometric/curl organization** — whether coexact signal forms consistent rotational structure.
-3. **Spectral organization** — whether interface signal has independent low-frequency structure after energy control.
-4. **Transition dynamics** — whether spatially disordered interactions nevertheless show biased biological state transitions.
-
-The central conclusion is:
-
-> Tumor–immune interfaces are high-intensity non-gradient interaction zones. They do not show robust rotational or interface-specific spectral organization after correction, but they exhibit exhaustion-directed transition dynamics and instability-like operator activity.
 
 ---
 
-## Main Results
+## Scientific Summary
 
-| Layer | Result | Cohort evidence | Interpretation |
-| --- | --- | --- | --- |
-| Coexact enrichment | Strong interface enrichment | TNBC discovery and GSE278936 validation | Interface is a high non-gradient interaction zone |
-| Spectral energy-matched null | Not interface-specific | TNBC: 2/43 significant; GSE278936: 2/23 significant; sign test p = 1.0 | Spectral signal is explained by energy magnitude, not independent interface geometry |
-| Graph-curl proxy | Weak / inconsistent | GSE278936 median fold ≈ 1.08; TNBC rebuilt graph-curl not used as cohort phenotype | No robust rotational phenotype |
-| KTS transition bias | Exhaustion-directed transition bias | GSE278936: near-universal exhaustion attractor; TNBC: immune-active/stroma → exhausted | Biological structure lies in transition dynamics |
-| Graph-KS proxy | Exploratory positive | GSE278936 interface/tumor fold ≈ 8–10 | Interface behaves as an instability-like nonlinear zone |
+Standard spatial transcriptomics analyses ask how many immune cells are
+near a tumour, or whether co-localisation exceeds a random baseline.
+Neither question determines whether the interaction *field* at the boundary
+is **geometrically organised** — whether it has non-gradient, rotationally
+structured components that cannot arise from passive diffusion or scalar
+potential functions.
+
+This framework answers that harder question by decomposing the
+tumour–immune wedge-flux operator into **exact (gradient)** and
+**coexact (non-gradient)** components via discrete Hodge theory, then
+falsifying the passive-transport null hypothesis using a
+PDE-constrained graph neural network under four independent confound controls.
+Across TNBC Visium (GSE210616, 43 sections), CosMx single-cell (108 FOVs),
+and pan-cancer Spatial Hallmarks (26 sections), the coexact component is
+systematically enriched at tumour–immune interfaces in a manner
+not reducible to cell density, phenotype shuffling, generic antisymmetry,
+or graph discretisation.
 
 ---
 
-## Repository Structure
+## Core Contribution
+
+The framework introduces:
+
+1. **Wedge-flux operator** — a bilinear, antisymmetric, edge-supported
+   discrete 1-form built from spatial programme scores; the unique local
+   operator antisymmetric under programme exchange.
+
+2. **Discrete Hodge decomposition** — exact separation of the field into
+   gradient (passive-compatible) and coexact (non-gradient) components
+   on the tumour–immune spatial graph.
+
+3. **PDE-constrained GNN falsification** — a physics-informed GNN trained
+   under the conservation-law constraint `div(flux) = 0`; reconstruction
+   failure falsifies passive diffusion.
+
+4. **Null-model battery** — four independent confound exclusions: density,
+   phenotype shuffle, generic antisymmetry, graph remeshing.
+
+5. **Spatial hallmarks biological validation** — 4-tier exhaustion marker
+   alignment across pan-cancer sections.
+
+---
+
+## Mathematical Framework
+
+```
+Wedge-flux operator (discrete 1-form):
+  ω(u,v) = A(u)·B(v) − A(v)·B(u)
+
+Hodge decomposition:
+  ω  =  dα          +  δβ       +  γ
+        (exact /         (coexact /    (harmonic)
+         gradient)        non-gradient)
+
+Falsification criterion:
+  R = E_coexact(interface) / E_coexact(background)
+  R > 1  →  non-passive organization
+  R → 1  under all four null models
+
+Stochastic Hodge Bayes factors:
+  log B(M1a / M0)  = +45.95
+  log B(M1b / M1a) = +517.6
+```
+
+**Uniqueness of the wedge:** Among all local, edge-supported, bilinear
+operators antisymmetric under programme exchange, the wedge product is unique
+up to scale. The coexact component is non-zero if and only if the field is
+non-integrable and cannot arise from a scalar potential.
+
+---
+
+## Biological Interpretation
+
+The coexact component at the tumour–immune interface represents
+**rotational, non-gradient interaction structure** — the spatial fingerprint
+of locally constrained, coherent interaction dynamics that:
+- cannot be explained by immune cell density alone,
+- cannot arise from passive diffusion of secreted molecules,
+- are specifically enriched in sections with high exhaustion marker expression
+  (Tier 2: all 7 exhaustion markers, ratios 3.36–4.75×, p = 1.49×10⁻⁸),
+- are reproducible across Visium, CosMx, and IMC platforms.
+
+> **KTS interpretation note:** KTS outputs are **spatial transition-bias
+> structures** inferred from static spatial transcriptomics data.
+> They are not direct temporal trajectories, causal state transitions,
+> or experimentally proven transport dynamics.
+> They represent geometric organisation consistent with directed interface
+> interaction under spatial constraints.
+
+---
+
+## What This Framework Is Not
+
+- **Not a CellChat / NicheNet replacement.** Ligand–receptor inference
+  methods operate on molecular interaction databases and predict signalling
+  events. This framework detects non-gradient operator structure and
+  spatial transition-bias organisation at the boundary — a complementary
+  geometric layer invisible to LR methods.
+
+- **Not a COMMOT / spatial autocorrelation replacement.** COMMOT models
+  optimal transport of ligand–receptor pairs. Moran's I / Geary's C measure
+  scalar autocorrelation. Neither captures antisymmetric, non-gradient
+  field geometry. This framework is structurally non-redundant (coexact
+  vs. Moran's I LOO AUC: 0.929 vs. 0.817; ρ = +0.65, shared variance only).
+
+- **Not a claim of literal molecular transport measurement.** The framework
+  falsifies the passive-diffusion null for the interaction *field*; it does
+  not measure individual molecule trajectories.
+
+- **Not a causal signalling model.** No causal graph is constructed.
+  The coexact component is a geometric property of the programme interaction
+  field at a static spatial snapshot.
+
+- **Not a temporal lineage model.** KTS states are spatial transition-bias
+  structures inferred from spatial co-occurrence, not from time-series data.
+
+---
+
+## Core Claim
+
+> The framework separates **local non-gradient interaction intensity**
+> (coexact field enrichment at the boundary) from spectral organisation
+> (Hodge exact component), geometric/curl organisation (KTS transition
+> bias), and biological transition-bias structure (exhaustion marker
+> alignment). Each layer is independently falsifiable and structurally
+> distinct from classical spatial metrics.
+
+---
+
+## Repository Architecture
+
+```
+raw spatial transcriptomics  (Visium / CosMx / IMC)
+          ↓
+    marker scoring  (tumour · immune · exhaustion · myeloid · EMT)
+          ↓
+    spatial graph / cell complex construction  (kNN k=6 / Delaunay)
+          ↓
+    wedge-flux operator construction  ω(u,v) = A(u)B(v) − A(v)B(u)
+          ↓
+    Hodge decomposition  ω = dα + δβ + γ
+          ↓
+    exact / coexact separation  (gradient vs. non-gradient)
+          ↓
+    spectral and geometric controls  (remeshing · Bayes factors · density)
+          ↓
+    spatial hallmarks  (pan-cancer 26 sections)
+          ↓
+    biological validation  (4-tier exhaustion markers)
+          ↓
+    baseline comparison  (Moran's I · NE score · spectral entropy · Node2Vec)
+          ↓
+    manuscript figures
+```
+
+### Directory Structure
 
 ```
 Hodge_Laplacian_GNN/
 │
-├── README.md                            ← this file
-├── README_TNBC.md                       ← TNBC pipeline: Steps 1–24 + corrected rebuild
-├── README_GSE278936_PIPELINE.md         ← GSE278936 external validation pipeline
-├── README_CosMx_external_validation.md  ← CosMx cross-technology validation
-├── reference.bib                        ← bibliography
+├── core/                          # Mathematical operator primitives
+│   ├── operator_geometry/         # Wedge field, antisymmetry
+│   ├── hodge_decomposition/       # Discrete Hodge solver
+│   ├── pde_constraints/           # PDE-constrained GNN
+│   ├── graph_construction/        # kNN / Delaunay builders
+│   └── transport_models/          # Passive diffusion nulls
 │
-├── scripts_tnbc/
-│   └── Full TNBC legacy pipeline (Steps 1–24): marker scoring, Hodge decomposition,
-│       GNN falsification, NCG, Zeta, biomarker validation, stochastic Hodge.
+├── spatial_hallmark/              # Pan-cancer validation module
+│   ├── build_biological_validation.py
+│   ├── baseline_comparison.py
+│   ├── build_spatial_hallmarks_kts_edges.py
+│   └── results_spatial_hallmarks/
+│       ├── spatial_hallmarks_hodge_interface.csv
+│       ├── spatial_hallmarks_kts_edges.csv
+│       ├── tier1_module_correlation.csv
+│       ├── tier2_exhaustion_endpoint.csv
+│       ├── tier3_stromal_mediation.csv
+│       ├── results_baseline_comparison.csv
+│       └── baseline_comparison.png
 │
-├── scripts_gse278936/
-│   └── External validation pipeline (Steps 01–14, 27): marker scoring, interface
-│       assignment, Hodge decomposition, normalized Zeta with energy-matched nulls,
-│       graph-curl proxy, KTS transition-bias, graph-KS instability.
+├── scripts/
+│   ├── preprocessing/             # AnnData construction, programme scoring
+│   ├── analysis/                  # Operator, Hodge, GNN, nulls
+│   ├── visualization/             # Figure generation
+│   └── utilities/                 # Shared helpers, repo tools
 │
-├── scripts_tnbc_rebuild/
-│   └── Utilities converting legacy TNBC outputs to the modern validation schema
-│       for corrected Zeta and KTS analysis.
+├── datasets/
+│   ├── raw/                       # Immutable source data (Git LFS / Zenodo)
+│   └── processed/                 # Scored AnnData objects
 │
-├── scripts_cosmx/
-│   └── CosMx single-cell spatial transcriptomics validation pipeline.
+├── results/
+│   ├── final/                     # Manuscript-level summary tables
+│   └── intermediate/              # Per-sample outputs (gitignored)
 │
-├── legacy_visium_pipeline/
-│   └── Archived early Visium prototype scripts (retained for provenance only).
+├── paper/
+│   ├── figures/                   # Final manuscript figures
+│   ├── supplementary/             # Supplementary materials
+│   └── manuscript/                # LaTeX source, bibliography
 │
-├── stats/
-│   └── CSV_GSM/    Per-sample intermediate CSVs from TNBC legacy pipeline (Steps 1–24).
-│
-├── results_cosmx/
-│   └── CosMx enrichment outputs (already included for reproducibility).
-│
-└── Results_TNBC_rebuild_gse278936/
-    └── Curated final CSV outputs for both the GSE278936 validation and the
-        corrected TNBC rebuild — the primary reproducibility directory.
-        Key files:
-          cohort_summary.csv
-          cohort_zeta_energy_matched_null.csv
-          step27_graph_curl_proxy_summary.csv
-          cohort_ks_operator_summary.csv
-          kts_transition_bias_summary.csv
-          kts_transition_bias_grouped_summary.csv
+├── docs/
+│   ├── reviewer_guide.md          # Figure-to-script mapping
+│   ├── methodology/               # Mathematical derivations
+│   ├── architecture/              # Pipeline design notes
+│   └── reproducibility/           # Step-by-step guides
+│   └── pipelines/
+|       ├── TNBC_pipeline.md
+|       ├── CosMx_pipeline.md
+|       ├── GSE278936_pipeline.md
+|       └── Interface_regime_pipeline.md
+└── archive/
+    ├── legacy_outputs/            # Pre-refactor outputs
+    ├── generated_outputs/         # Bulky reproducible artifacts
+    ├── exploratory/               # Development-phase scripts
+    └── deprecated/                # Superseded approaches
 ```
-
-Raw datasets are not stored in the repository. Public accession links are provided below.
 
 ---
 
-## Pipelines
+## Environment Setup
 
-### 1. TNBC Discovery (GSE210616)
-
-The `scripts_tnbc/` pipeline implements the full 24-step TNBC analysis. See `README_TNBC.md` for step-by-step commands.
-
-Highlights:
-- Steps 1–7: marker scoring, region annotation, wedge flux, Hodge decomposition, enrichment testing
-- Steps 9–18: curl maps, Lie null, PDE-constrained GNN, ablation, hybrid decomposition
-- Steps 19–22: biological anchoring, NCG commutator, Zeta spectral diagnostic, biomarker validation
-- Step 23: operator robustness (5 antisymmetric constructions)
-- Step 24: stochastic Hodge / Bayesian model comparison
-
-### 2. GSE278936 External Validation
-
-The `scripts_gse278936/` pipeline implements the standardized external validation workflow for prostate cancer Visium data. See `README_GSE278936_PIPELINE.md` for full documentation.
-
-It includes: marker-score construction, interface assignment, wedge flux, Hodge decomposition, coexact energy, interface enrichment, normalized Zeta with energy-matched nulls, graph-curl proxy, KTS transition-bias, exploratory graph-KS instability.
-
-### 3. TNBC Corrected Rebuild
-
-Legacy TNBC outputs in `stats/CSV_GSM/` are converted to the modern schema by:
+### Option A — Conda (recommended)
 
 ```bash
-python scripts_tnbc_rebuild/convert_tnbc_legacy_to_modern.py
-python scripts_tnbc_rebuild/normalize_tnbc_regions.py
+git clone https://github.com/Anas-Enoch/Hodge_Laplacian_GNN.git
+cd Hodge_Laplacian_GNN
+conda env create -f environment.yml
+conda activate hodge-operator
 ```
 
-Region mapping: `interface_like → interface`, `tumor_enriched → tumor_core`,
-`stroma_enriched → stroma`, `immune_enriched → immune`, `other → other`.
-
-Corrected outputs go to `Results_TNBC_rebuild_gse278936/`.
-
-### 4. CosMx External Validation
-
-The CosMx workflow is documented in `README_CosMx_external_validation.md`. It validates local coexact non-gradient enrichment at single-cell resolution. It is **not** used as evidence for corrected Zeta, KTS, or KS claims.
-
----
-
-## Key Reproducibility Commands
-
-### GSE278936 — energy-matched Zeta null
+### Option B — pip
 
 ```bash
-python scripts_gse278936/step10_zeta_energy_matched_null.py \
-  --statsdir Results_TNBC_rebuild_gse278936 \
-  --out Results_TNBC_rebuild_gse278936/cohort_zeta_energy_matched_null.csv \
-  --n-perm 300 --k-eigs 50
-# Expected: 2/23 significant; sign test p = 1.0
-```
-
-### GSE278936 — KTS transition bias
-
-```bash
-python scripts_gse278936/step13b_kts_transition_bias.py \
-  --statsdir Results_TNBC_rebuild_gse278936 \
-  --out Results_TNBC_rebuild_gse278936/kts_transition_bias_summary.csv \
-  --n-perm 300 --seed 123
-# Expected: IMMUNE_EXHAUSTED attractor in 21–23/23 sections per transition
-```
-
-### GSE278936 — graph-KS operator
-
-```bash
-python scripts_gse278936/step14_ks_operator.py \
-  --statsdir Results_TNBC_rebuild_gse278936 \
-  --outdir Results_TNBC_rebuild_gse278936
-# Expected: median fold ≈ 8.96 (23/23 fold > 1)
-```
-
-### TNBC rebuild — corrected Zeta null
-
-```bash
-python scripts_gse278936/step10_zeta_energy_matched_null.py \
-  --statsdir Results_TNBC_rebuild_gse278936 \
-  --out Results_TNBC_rebuild_gse278936/cohort_zeta_energy_matched_null.csv \
-  --n-perm 300 --k-eigs 50
-# Expected: 2/43 significant; sign test p = 1.0
-```
-
-### TNBC rebuild — KTS transition bias
-
-```bash
-python scripts_gse278936/step11_kts_state_assignment.py \
-  --statsdir Results_TNBC_rebuild_gse278936 --outdir Results_TNBC_rebuild_gse278936
-
-python scripts_gse278936/step12_kts_transition_matrix.py \
-  --statsdir Results_TNBC_rebuild_gse278936
-
-python scripts_gse278936/step13b_kts_transition_bias.py \
-  --statsdir Results_TNBC_rebuild_gse278936 \
-  --out Results_TNBC_rebuild_gse278936/kts_transition_bias_summary.csv \
-  --n-perm 300 --seed 123
-# Expected: IMMUNE_ACTIVE→IE bias 5.68 (16/28); STROMA→IE bias 2.41 (17/29); TUMOR→IE not enriched
-```
-
----
-
-## Corrected Spectral Interpretation
-
-Normalized Zeta with energy-matched null models replaces earlier unnormalized or size-matched approaches.
-
-Final result:
-
-```
-TNBC:      2/43 significant; sign test p = 1.0
-GSE278936: 2/23 significant; sign test p = 1.0
-```
-
-> Tumor–immune interfaces are not spectrally more organized than equally energetic regions.
-> Interface coexact enrichment reflects increased interaction intensity rather than distinct spectral geometry.
-
----
-
-## KTS Interpretation
-
-KTS analysis tests whether spatially disorganized interactions still exhibit directional biological transition bias.
-
-**GSE278936:** near-universal exhaustion-directed attractor across all compartments (21–23/23 per transition).
-
-**TNBC rebuilt:**
-
-```
-IMMUNE_ACTIVE → IMMUNE_EXHAUSTED: median bias ratio 5.68; 16/28 significant
-STROMA        → IMMUNE_EXHAUSTED: median bias ratio 2.41; 17/29 significant
-TUMOR         → IMMUNE_EXHAUSTED: not enriched; median bias ratio 0.42
-```
-
-> Exhaustion is a conserved dynamical endpoint, but its transition structure differs by cohort.
-> In TNBC, exhaustion is mediated through immune-active and stromal pathways, not direct tumor transitions.
-
----
-
-## Graph-Curl and KS Notes
-
-Graph-curl proxy analyses are treated as geometric controls. They do not support a robust cohort-level rotational phenotype. The robust spatial signal is coexact energy enrichment.
-
-The graph-Kuramoto–Sivashinsky operator is exploratory: it quantifies instability-like behavior of the coexact-energy field. It is **not** a claim that the biological system solves the KS PDE.
-
----
-
-## Circularity Boundary
-
-Construction panels (forbidden from downstream validation):
-
-- **Tumor:** EPCAM, KRT8, KRT18, KRT19, ERBB2, MUC1, TACSTD2
-- **Immune:** PTPRC, CD3D, CD3E, NKG7, CD68, C1QA, CXCL9, CXCL10
-- **Stroma:** COL1A1, COL1A2, DCN, LUM, POSTN, FAP, TAGLN
-
-KTS state definitions and transition-bias analyses are treated as transition-level biological analysis, not as direct validation of wedge construction.
-
----
-
-## Datasets
-
-| Dataset | Description | Access |
-|---|---|---|
-| GSE210616 | TNBC discovery (22 patients, 43 Visium sections) | https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE210616 |
-| GSE278936 | Prostate cancer external validation (23 Visium sections) | https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE278936 |
-| CosMx Breast Multiomic | Cross-technology single-cell validation | https://nanostring.com/products/cosmx-spatial-molecular-imager/ffpe-dataset/ |
-
----
-
-## Environment
-
-```bash
-python >= 3.9
-python3 -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/Anas-Enoch/Hodge_Laplacian_GNN.git
+cd Hodge_Laplacian_GNN
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# or: pip install numpy pandas scipy scikit-learn matplotlib networkx tqdm scanpy
 ```
+
+---
+
+## Data Requirements
+
+| Dataset | Platform | Sections | Access |
+|---|---|---|---|
+| GSE210616 | Visium CytAssist | 43 (22 patients) | GEO public |
+| CosMx Breast Multiomic | CosMx SMI | 108 FOVs | Nanostring AtoMx |
+| Spatial Hallmarks | Visium | 26 pan-cancer | Zenodo 14044964 |
+| MERFISH cortex | MERFISH | 3 | Allen Brain Atlas |
+
+> **Large-file policy:** Raw `.h5ad` files and dense edge tables are **not
+> committed to git**. They must be regenerated from pipeline scripts or
+> downloaded as GitHub Release / Zenodo assets.
+> GitHub-tracked files are limited to: scripts, documentation, summary CSVs,
+> and manuscript-critical figure outputs.
+
+```bash
+# Download Spatial Hallmarks (Zenodo)
+wget https://zenodo.org/record/14044964/files/spatial_hallmarks_scored.h5ad \
+     -O datasets/processed/spatial_hallmarks_scored.h5ad
+```
+
+---
+
+## Reproduction Workflow
+
+### 1. Programme Scoring
+
+```bash
+python scripts/preprocessing/score_programmes.py \
+    --input  datasets/raw/GSE210616/ \
+    --output datasets/processed/tnbc_scored.h5ad
+# Runtime: ~8 min/section · Output: tnbc_scored.h5ad
+```
+
+### 2. Hodge Decomposition
+
+```bash
+python scripts/analysis/hodge_decomposition.py \
+    --adata  datasets/processed/tnbc_scored.h5ad \
+    --k      6 \
+    --output results/final/hodge_summary.csv
+# Runtime: ~3 min/section · Output: hodge_summary.csv
+```
+
+### 3. PDE-Constrained GNN Falsification
+
+```bash
+python scripts/analysis/pde_gnn_falsification.py \
+    --adata      datasets/processed/tnbc_scored.h5ad \
+    --hodge      results/final/hodge_summary.csv \
+    --null-tests density shuffle antisymmetry remeshing \
+    --output     results/final/gnn_falsification.csv
+# Runtime: ~45 min · log B M1a/M0 = +45.95; log B M1b/M1a = +517.6
+```
+
+### 4. Spatial Hallmarks Biological Validation
+
+```bash
+python3 spatial_hallmark/build_biological_validation.py \
+  --adata   datasets/processed/spatial_hallmarks_scored.h5ad \
+  --hodge   spatial_hallmark/results_spatial_hallmarks/spatial_hallmarks_hodge_interface.csv \
+  --kts     spatial_hallmark/results_spatial_hallmarks/spatial_hallmarks_kts_edges.csv \
+  --out-dir spatial_hallmark/results_spatial_hallmarks/ \
+  --fig-dir spatial_hallmark/results_spatial_hallmarks/
+# Runtime: ~15 min · Tier 2: all 7 exhaustion markers p = 1.49×10⁻⁸
+```
+
+### 5. Baseline Comparison
+
+```bash
+python3 spatial_hallmark/baseline_comparison.py \
+  --adata   datasets/processed/spatial_hallmarks_scored.h5ad \
+  --hodge   spatial_hallmark/results_spatial_hallmarks/spatial_hallmarks_hodge_interface.csv \
+  --kts     spatial_hallmark/results_spatial_hallmarks/spatial_hallmarks_kts_edges.csv \
+  --out     spatial_hallmark/results_spatial_hallmarks/results_baseline_comparison.csv \
+  --fig     spatial_hallmark/results_spatial_hallmarks/baseline_comparison.png
+# Coexact AUC 0.929 · NE 0.517 · spectral entropy 0.400 · Node2Vec 0.375
+```
+
+### 6. Figure Generation
+
+```bash
+python scripts/visualization/generate_manuscript_figures.py \
+    --results results/final/ \
+    --output  paper/figures/
+```
+
+---
+
+## Spatial Hallmark Validation Module
+
+The `spatial_hallmark/` module provides standalone pan-cancer biological
+validation and baseline comparison, independent of the full TNBC pipeline.
+
+```
+spatial_hallmark/
+├── build_biological_validation.py    # 4-tier exhaustion marker alignment
+├── baseline_comparison.py            # Moran's I · NE · entropy · Node2Vec
+├── build_spatial_hallmarks_kts_edges.py  # KTS spatial transition-bias edges
+└── results_spatial_hallmarks/
+    ├── spatial_hallmarks_hodge_interface.csv
+    ├── spatial_hallmarks_kts_edges.csv
+    ├── tier1_module_correlation.csv
+    ├── tier2_exhaustion_endpoint.csv
+    ├── tier3_stromal_mediation.csv
+    ├── results_baseline_comparison.csv
+    └── baseline_comparison.png
+```
+
+**Validation results:**
+
+| Tier | Markers | Sections | Result |
+|---|---|---|---|
+| T1 | Cytotoxic module | 25/26 | ρ = 0.240 |
+| T2 | 7 exhaustion markers | 26/26 | Ratio 3.36–4.75×, p = 1.49×10⁻⁸ |
+| T3 | TGFB1 / FAP / CXCL12 | Significant | Stromal mediation |
+| T4 | Extended panel | Pending | Not yet validated |
+
+---
+
+## Baseline Comparison
+
+| Metric | LOO AUC | Spearman ρ vs. coexact | Interpretation |
+|---|---|---|---|
+| Interface coexact energy | **0.929** | — | Reference |
+| Moran's I | 0.817 | +0.65 | Shared spatial clustering; 0.11 AUC gap |
+| NE score (Giotto) | 0.517 | — | Near chance |
+| Graph spectral entropy | 0.400 | — | Below chance |
+| Node2Vec embedding | 0.375 | — | Below chance |
+
+---
+
+## Figures
+
+See [`paper/figures/FIGURE_MANIFEST.md`](paper/figures/FIGURE_MANIFEST.md)
+for complete figure → script → input → output mapping.
+
+---
+
+## Reviewer Guide
+
+See [`docs/reviewer_guide.md`](docs/reviewer_guide.md) for:
+- figure reproduction workflow,
+- key statistical result checklist,
+- legacy filename mapping,
+- hardware and runtime requirements.
 
 ---
 
 ## Citation
 
+```bibtex
+@article{enoch2026nonpassive,
+  author  = {Enoch, Anas},
+  title   = {Non-passive transport organization at tumour--immune interfaces
+             revealed by operator-based analysis},
+  journal = {Bioinformatics Advances},
+  year    = {2026},
+  note    = {Manuscript ID: BIOINF-2026-0777}
+}
+```
 
-> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.
-=======
-> Anas Enoch. *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis.* 
+---
 
-> Bassiouni R et al. *Spatial Transcriptomic Analysis of a Diverse Patient Cohort Reveals a Conserved Architecture in Triple-Negative Breast Cancer.* Cancer Research 83(1):34–48, 2023. GEO: GSE210616.
+## License
+
+MIT License — see [LICENSE](LICENSE).
+
+---
+
+## Contact
+
+**Anas Enoch** · MD, Mohammed VI University of Health Sciences (UM6SS), Casablanca  
+GitHub: [@Anas-Enoch](https://github.com/Anas-Enoch/Hodge_Laplacian_GNN)

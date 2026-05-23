@@ -1,6 +1,6 @@
 # Hodge-Laplacian Operator Framework for Tumor–Immune Interface Analysis
 
-**Manuscript:** *Non-passive transport organization at tumor–immune interfaces revealed by operator-based analysis*
+**Manuscript:** *Non-gradient spatial organisation at tumor--immune interfaces revealed by operator-based analysis*
 **Author:** Anas Enoch, MD
 **Affiliation:** Mohammed VI University of Health Sciences (UM6SS), Casablanca, Morocco
 
@@ -45,8 +45,11 @@ Hodge_Laplacian_GNN/
 ├── README_TNBC.md                       ← TNBC pipeline: Steps 1–24 + corrected rebuild
 ├── README_GSE278936_PIPELINE.md         ← GSE278936 external validation pipeline
 ├── README_CosMx_external_validation.md  ← CosMx cross-technology validation
-├── environment.yml + requirements.txt                       
-│
+├── environment.yml + requirements.txt
+│                       
+│── Benchmarking/     build_real_baseline_benchmarking.py\spatial_hallmarks_hodge_interface.csv + results1 
+│               ├──── build_real_baseline_benchmarking_hcc.py\results_hcc_hodge_interface_summary_valid.csv + results2
+│               └──── Readme_Baseline Benchmark.md + fig_baseline_comparison.png
 ├── scripts_tnbc/
 │   └── Full TNBC legacy pipeline (Steps 1–24): marker scoring, Hodge decomposition,
 │       GNN falsification, NCG, Zeta, biomarker validation, stochastic Hodge.

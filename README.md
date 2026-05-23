@@ -1,6 +1,6 @@
 # Hodge-Laplacian Operator Framework for Tumor–Immune Interface Analysis
 
-**Manuscript:** *Non-gradient spatial organisation at tumor--immune interfaces revealed by operator-based analysis*
+**Manuscript:** *Non-gradient spatial organisation at tumor-immune interfaces revealed by operator-based analysis*
 **Author:** Anas Enoch, MD
 **Affiliation:** Mohammed VI University of Health Sciences (UM6SS), Casablanca, Morocco
 

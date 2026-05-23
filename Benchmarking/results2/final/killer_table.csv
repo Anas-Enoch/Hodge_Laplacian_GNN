@@ -1,0 +1,8 @@
+Method,Detects scalar gradients,Detects adjacency,Detects LR proximity,Detects antisymmetric edge field,Hodge coexact component,Interface enrichment replicated,Note
+Squidpy NE,✗,✓,✗,✗,✗,No,Adjacency freq. only
+Moran's I (esda),✓,✗,✗,✗,✗,No,Scalar clustering only
+SPARK-X / SpatialDE,✓,✗,✗,✗,✗,No,"Spatial variability, gradient-compatible"
+LR proximity (COMMOT-style),✗,✗,✓,✗,✗,No,Co-expression proximity; no directionality
+Boundary DE,✓,✗,✗,✗,✗,No,Compares means; no field geometry
+Hodge exact (dα),✓,✗,✗,✗,✗,No,Gradient component of ω
+Hodge coexact (δβ) — this work,✗,✗,✗,✓,✓,Yes,Non-gradient antisymmetric field; biologically grounded

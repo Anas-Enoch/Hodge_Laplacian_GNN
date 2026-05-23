@@ -1,0 +1,21 @@
+\begin{table*}[ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Capability comparison of spatial-biology methods. \checkmark~= method can in principle detect this property; \ding{55}~= method cannot encode this property by construction.}
+\label{tab:killer}
+\begin{tabular}{p{3.4cm}ccccccp{3.8cm}}
+\toprule
+\textbf{Method} & \textbf{Scalar gradients} & \textbf{Adjacency} & \textbf{LR proximity} & \textbf{Antisymm. edge field} & \textbf{Coexact} & \textbf{Iface enrichment} & \textbf{Note} \\
+
+\midrule
+Squidpy NE & \ding{55} & \checkmark & \ding{55} & \ding{55} & \ding{55} & No & Adjacency freq. only \\
+Moran's I (esda) & \checkmark & \ding{55} & \ding{55} & \ding{55} & \ding{55} & No & Scalar clustering only \\
+SPARK-X / SpatialDE & \checkmark & \ding{55} & \ding{55} & \ding{55} & \ding{55} & No & Spatial variability, gradient-compatible \\
+LR proximity (COMMOT-style) & \ding{55} & \ding{55} & \checkmark & \ding{55} & \ding{55} & No & Co-expression proximity; no directionality \\
+Boundary DE & \checkmark & \ding{55} & \ding{55} & \ding{55} & \ding{55} & No & Compares means; no field geometry \\
+Hodge exact (dα) & \checkmark & \ding{55} & \ding{55} & \ding{55} & \ding{55} & No & Gradient component of ω \\
+\textbf{Hodge coexact (δβ) — this work} & \ding{55} & \ding{55} & \ding{55} & \checkmark & \checkmark & \textbf{Yes} & Non-gradient antisymmetric field; biologically grounded \\
+\bottomrule
+\end{tabular}
+\end{table*}

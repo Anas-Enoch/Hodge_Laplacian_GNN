@@ -1,0 +1,7 @@
+method,spearman_rho_vs_coexact,spearman_p,median_auc_interface_vs_core,bio_exhaustion_recovery,bio_cytotoxic_recovery
+Squidpy NE,—,—,—,1.34,1.54
+Moran's I,—,—,—,1.34,1.54
+SPARK-X equiv,0.857,0.000,0.5,1.34,1.54
+SpatialDE FSV,0.764,0.001,0.5,1.34,1.54
+LR proximity,-0.182,0.516,0.429,1.34,1.54
+Hodge coexact (operator),1.0,—,0.473,1.34,1.54

@@ -119,7 +119,7 @@ Sections with > 5,000 spots subsampled uniformly to 5,000 (seed 42).
 Sample IDs verified to match between AnnData and hodge CSV before running.
 
 ```bash
-python3 build_real_baseline_benchmarking.py \
+python3 build_real_baseline_benchmarking_hcc.py \
   --adata  data/hcc/hcc_scored.h5ad \
   --hodge  Benchmarking/results_hcc_hodge_interface_summary_valid.csv \
   --outdir Benchmarking/results/final/ \

@@ -62,12 +62,23 @@ RNG = np.random.default_rng(42)
 # ══════════════════════════════════════════════════════════════════════════
 
 def get_args():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--adata",  default="datasets/processed/tnbc_scored.h5ad")
-    ap.add_argument("--hodge",  default="results/final/hodge_summary.csv")
-    ap.add_argument("--outdir", default="results/final/")
-    ap.add_argument("--k",      type=int, default=6)
-    ap.add_argument("--n-perm", type=int, default=999)
+    ap = argparse.ArgumentParser(
+        description="Real-tool spatial baseline benchmark. "
+                    "Works with any scored AnnData + Hodge interface CSV.")
+    ap.add_argument("--adata",
+                    default="data/spatial_hallmarks_scored.h5ad",
+                    help="Scored AnnData (.h5ad)")
+    ap.add_argument("--hodge",
+                    default="spatial_hallmark/results_spatial_hallmarks/"
+                            "spatial_hallmarks_hodge_interface.csv",
+                    help="Hodge interface summary CSV "
+                         "(spatial hallmarks or HCC format)")
+    ap.add_argument("--outdir",    default="results/final/")
+    ap.add_argument("--k",         type=int,   default=6)
+    ap.add_argument("--n-perm",    type=int,   default=999)
+    ap.add_argument("--max-spots", type=int,   default=0,
+                    help="Subsample sections larger than this. 0 = no limit.")
+    ap.add_argument("--seed",      type=int,   default=42)
     return ap.parse_args()
 
 
@@ -316,14 +327,39 @@ def run_lr_proximity(coords, ligand_vals, receptor_vals, k=6,
 
 def load_coexact(hodge_path, sid):
     df = pd.read_csv(hodge_path)
+
+    # Handle Step-7-style multi-row format (one row per metric: exact/coexact/harmonic)
+    # Filter to coexact rows using note or metric column if present
+    for filter_col in ("note", "metric", "component"):
+        if filter_col in df.columns:
+            mask = df[filter_col].astype(str).str.contains("coexact", case=False, na=False)
+            if mask.any():
+                df = df[mask]
+            break
+
     row = df[df["sample_id"] == sid]
     if row.empty:
         return np.nan, np.nan
     r = row.iloc[0]
-    ratio = r.get("interface_coexact_ratio",
+
+    # Ratio — ordered by format priority:
+    # 1. spatial_hallmarks_hodge_interface.csv  → interface_vs_tumor_enrichment
+    # 2. HCC interface summary                  → iface_coexact_energy
+    # 3. Step 7 TNBC pipeline                   → observed_ratio
+    # 4. Generic fallbacks
+    ratio = r.get("interface_vs_tumor_enrichment",   # spatial hallmarks format
+           r.get("interface_coexact_ratio",
            r.get("enrichment_ratio",
-           r.get("iface_coexact_energy", np.nan)))
-    frac  = r.get("coexact_fraction", np.nan)
+           r.get("iface_coexact_energy",
+           r.get("observed_ratio",
+           r.get("coexact_ratio",
+           r.get("ratio", np.nan)))))))
+    frac  = r.get("coexact_fraction",
+           r.get("coexact_frac", np.nan))
+
+    if np.isnan(ratio):
+        print(f"    [WARN] load_coexact: no ratio column found for '{sid}'. "
+              f"CSV columns: {list(r.index)}")
     return float(ratio), float(frac)
 
 
@@ -377,10 +413,37 @@ def process_section(sid, adata, hodge_path, k, n_perm, args):
         coords = adata.obs[["x","y"]].values.astype(float)
 
     obs = adata.obs.copy()
-    immune = obs.get("immune_score", pd.Series(np.zeros(len(obs)))).values.astype(float)
-    tumor  = obs.get("tumor_score",  pd.Series(np.zeros(len(obs)))).values.astype(float)
-    exh    = obs.get("immune_exhaustion_score",
-             obs.get("exhaustion_score", pd.Series(np.zeros(len(obs))))).values.astype(float)
+    # ── Detect actual programme score column names ────────────────────────
+    SCORE_CANDIDATES = {
+        "immune": ["tcell_score",        # spatial hallmarks format
+                   "immune_score", "immune_programme", "Immune_score",
+                   "immune_prog_score", "T_score", "immune_fraction"],
+        "tumor":  ["tumor_score", "tumour_score", "Tumor_score",
+                   "tumour_programme", "tumor_prog_score", "cancer_score"],
+        "exh":    ["exhaustion_score", "immune_exhaustion_score",
+                   "exhaustion_programme", "Exhaustion_score"],
+    }
+    def detect_col(obs, candidates, label):
+        for c in candidates:
+            if c in obs.columns:
+                return obs[c].values.astype(float)
+        present = [c for c in obs.columns if any(k in c.lower() for k in [label, label[:3]])]
+        if present:
+            print(f"    [WARN] using '{present[0]}' as {label} score")
+            return obs[present[0]].values.astype(float)
+        print(f"    [WARN] no {label} score column found; "
+              f"baseline metrics will be NaN (columns: {list(obs.columns)[:8]}…)")
+        return None
+
+    immune_vals = detect_col(obs, SCORE_CANDIDATES["immune"], "immune")
+    tumor_vals  = detect_col(obs, SCORE_CANDIDATES["tumor"],  "tumor")
+    exh_vals    = detect_col(obs, SCORE_CANDIDATES["exh"],    "exhaustion")
+
+    # Use NaN arrays when columns are missing so statistics fail cleanly
+    _nan = np.full(len(obs), np.nan)
+    immune = immune_vals if immune_vals is not None else _nan
+    tumor  = tumor_vals  if tumor_vals  is not None else _nan
+    exh    = exh_vals    if exh_vals    is not None else _nan
 
     # Interface mask (consistent across all methods)
     iface = interface_mask(obs)
@@ -447,6 +510,45 @@ def process_section(sid, adata, hodge_path, k, n_perm, args):
     else:
         overlap_lr = overlap_immune = np.nan
 
+    # ── B4: Shallow graph embedding (node2vec-style random walk + SVD) ────
+    embed_dim   = getattr(args, 'embed_dim',   32)
+    embed_walks = getattr(args, 'embed_walks', 10)
+    n   = len(obs)
+    rng = np.random.default_rng(getattr(args, 'seed', 42))
+    edges, _ = build_knn(coords, k)
+
+    try:
+        # Build adjacency list
+        adj = [[] for _ in range(n)]
+        for i, j in edges:
+            adj[i].append(j); adj[j].append(i)
+        # Random walks → co-occurrence
+        cooc = np.zeros((n, n), dtype=np.float32)
+        window = 5; walk_len = 40
+        for start in range(n):
+            if not adj[start]: continue
+            for _ in range(embed_walks):
+                walk = [start]
+                for _s in range(walk_len - 1):
+                    nbs = adj[walk[-1]]
+                    if not nbs: break
+                    walk.append(int(rng.choice(nbs)))
+                for t, node in enumerate(walk):
+                    for ctx in walk[max(0, t-window): t+window+1]:
+                        if ctx != node: cooc[node, ctx] += 1.0
+        # PPMI → SVD
+        EPS2 = 1e-10
+        rs = cooc.sum(1, keepdims=True) + EPS2
+        cs = cooc.sum(0, keepdims=True) + EPS2
+        tot = cooc.sum() + EPS2
+        ppmi = np.maximum(np.log((cooc / tot) / ((rs / tot) * (cs / tot)) + EPS2), 0)
+        U, S, _ = np.linalg.svd(ppmi, full_matrices=False)
+        kk = min(embed_dim, U.shape[1])
+        emb = (U[:, :kk] * np.sqrt(S[:kk])).astype(np.float32)
+    except Exception as exc:
+        print(f"    [WARN] Node2Vec skipped: {exc}")
+        emb = np.zeros((n, embed_dim), dtype=np.float32)
+
     return {
         "sample_id"          : sid,
         "coexact_ratio"      : coexact_ratio,
@@ -467,6 +569,7 @@ def process_section(sid, adata, hodge_path, k, n_perm, args):
         "top10_overlap_immune_vs_coexact": overlap_immune,
         "bio_exhaustion_ratio": bio.get("exhaustion", np.nan),
         "bio_cytotoxic_ratio" : bio.get("cytotoxic",  np.nan),
+        "_embedding"         : emb,   # popped before CSV save
     }
 
 
@@ -621,7 +724,7 @@ def killer_table_latex(df_kt):
 #  FIGURE: 4-panel benchmark
 # ══════════════════════════════════════════════════════════════════════════
 
-def make_figure(df_sec, df_method, outpath):
+def make_figure(df_sec, df_method, outpath, cohort_name=""):
     fig = plt.figure(figsize=(18, 14))
     gs  = GridSpec(2, 2, figure=fig, hspace=0.40, wspace=0.35)
     ax1 = fig.add_subplot(gs[0, 0])
@@ -644,11 +747,21 @@ def make_figure(df_sec, df_method, outpath):
             r, _ = spearmanr(v["coexact_ratio"], v[col])
             rhos.append(r)
         else:
-            rhos.append(0.0)
+            # Use np.nan not 0.0 — failed computation ≠ genuine zero correlation
+            n_valid = len(v)
+            print(f"    [WARN] {col}: only {n_valid} valid pairs — "
+                  f"Spearman not computed (likely column name mismatch)")
+            rhos.append(np.nan)
     rhos.append(1.0)
 
-    colors = ["#5B9BD5"]*5 + ["#E74C3C"]
-    bars = ax1.barh(range(6), rhos, color=colors, edgecolor="white", height=0.6)
+    colors  = ["#5B9BD5" if not np.isnan(r) else "#CCCCCC" for r in rhos[:-1]] + ["#E74C3C"]
+    hatches = ["///" if np.isnan(r) else "" for r in rhos[:-1]] + [""]
+    bars = ax1.barh(range(6), [r if not np.isnan(r) else 0 for r in rhos],
+                   color=colors, edgecolor="white", height=0.6)
+    for bar, hatch, r in zip(bars, hatches, rhos):
+        bar.set_hatch(hatch)
+        if np.isnan(r):
+            bar.set_edgecolor("#999")
     ax1.axvline(0, color="#888", lw=1)
     ax1.set_yticks(range(6))
     ax1.set_yticklabels(methods, fontsize=9)
@@ -719,7 +832,7 @@ def make_figure(df_sec, df_method, outpath):
 
     plt.suptitle(
         "Real-tool baseline benchmark: spatial-biology methods vs. Hodge coexact operator\n"
-        "TNBC Visium cohort (GSE210616) · same sections · same interface labels",
+        f"same sections · same interface labels · cohort: {cohort_name}",
         fontsize=11, y=1.01)
     plt.savefig(outpath, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close()
@@ -735,24 +848,81 @@ def main():
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    print("Loading AnnData...")
+    print(f"Loading AnnData...")
     import scanpy as sc
     adata = sc.read_h5ad(args.adata)
+
     hodge_path = args.hodge
+    hodge = pd.read_csv(hodge_path)
+    valid_sections = hodge["sample_id"].astype(str).tolist()
+    adata.obs["sample_id"] = adata.obs["sample_id"].astype(str)
 
-    if not Path(hodge_path).exists():
-        raise FileNotFoundError(f"Hodge CSV not found: {hodge_path}")
+    anndata_ids = set(adata.obs["sample_id"].unique())
+    matched = [s for s in valid_sections if s in anndata_ids]
+    missing  = [s for s in valid_sections if s not in anndata_ids]
 
-    print(f"Sections: {adata.obs['sample_id'].nunique()}")
+    print(f"AnnData sections:  {adata.obs['sample_id'].nunique()}")
+    print(f"Hodge-valid sections: {len(valid_sections)}")
+    if missing:
+        print(f"  WARNING — {len(missing)} hodge IDs not in AnnData: {missing}")
+    print(f"Matched sections:  {len(matched)}")
+    print(f"Max spots per section: "
+          f"{'no limit' if args.max_spots == 0 else args.max_spots} "
+          f"({'subsampled' if args.max_spots > 0 else 'full'})")
     print(f"Baselines: Squidpy NE · Moran's I · SPARK-X eq · SpatialDE eq · LR prox")
-    print()
 
-    records = []
-    for sid, group in adata.obs.groupby("sample_id"):
-        adata_sec = adata[group.index].copy()
-        if len(adata_sec) < 20:
-            continue
+    rng_sub = np.random.default_rng(args.seed)
+    records  = []
+    embeddings = {}
+    labels     = {}
+
+    for sid in matched:
+        mask      = adata.obs["sample_id"] == sid
+        adata_sec = adata[mask].copy()
+        n_total   = adata_sec.n_obs
+
+        # ── Subsampling (never skip) ─────────────────────────────────────
+        if args.max_spots > 0 and n_total > args.max_spots:
+            # Stratified by region label if available, else uniform
+            obs = adata_sec.obs
+            strat_col = next((c for c in ["region", "region_label", "coarse"]
+                              if c in obs.columns), None)
+            if strat_col:
+                chosen = []
+                groups = obs[strat_col].unique()
+                per_group = max(1, args.max_spots // len(groups))
+                for g in groups:
+                    g_idx = obs.index[obs[strat_col] == g].tolist()
+                    n_g   = min(len(g_idx), per_group)
+                    chosen.extend(rng_sub.choice(g_idx, size=n_g, replace=False).tolist())
+                # Top up to max_spots if needed
+                remaining = [i for i in obs.index if i not in set(chosen)]
+                still_need = args.max_spots - len(chosen)
+                if still_need > 0 and remaining:
+                    extra = rng_sub.choice(remaining,
+                                           size=min(still_need, len(remaining)),
+                                           replace=False).tolist()
+                    chosen.extend(extra)
+            else:
+                chosen = rng_sub.choice(adata_sec.obs.index,
+                                        size=args.max_spots, replace=False).tolist()
+
+            adata_sec = adata_sec[chosen].copy()
+            print(f"\n  [{sid}] n={n_total} → subsampled to {adata_sec.n_obs}"
+                  f" (strat={'yes' if strat_col else 'uniform'})")
+        else:
+            print(f"\n  [{sid}] n={n_total}")
+
         r = process_section(sid, adata_sec, hodge_path, args.k, args.n_perm, args)
+        embeddings[sid] = r.pop("_embedding", np.zeros((adata_sec.n_obs, 32), dtype=np.float32))
+        resp_col = next((c for c in ["response", "Response"] if c in adata_sec.obs.columns), None)
+        if resp_col:
+            raw = adata_sec.obs[resp_col].astype(str).str.strip().str.lower()
+            binary = np.where(raw.isin(["r","responder","response","1","yes"]), 1,
+                     np.where(raw.isin(["nr","nonresponder","non-responder","0","no"]), 0, np.nan))
+            valid_labels = binary[~np.isnan(binary)]
+            if len(valid_labels) > 0:
+                labels[sid] = float(np.round(valid_labels.mean()))
         records.append(r)
 
     df_sec = pd.DataFrame(records)
@@ -792,7 +962,8 @@ def main():
 
     # ── Figure ────────────────────────────────────────────────────────────
     fig_out = outdir / "fig_real_baseline.png"
-    make_figure(df_sec, df_method, fig_out)
+    make_figure(df_sec, df_method, fig_out,
+                cohort_name=Path(args.adata).stem)
 
     print("\nDone.")
 

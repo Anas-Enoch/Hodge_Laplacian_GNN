@@ -56,8 +56,8 @@ The hodge interface CSV column for the enrichment ratio is also cohort-specific:
 ```bash
 python3 build_real_baseline_benchmarking.py \
   --adata  data/spatial_hallmarks_scored.h5ad \
-  --hodge  Benchmarking/spatial_hallmarks_hodge_interface.csv \
-  --outdir Benchmarking/results/final/
+  --hodge  spatial_hallmark/results_spatial_hallmarks/spatial_hallmarks_hodge_interface.csv \
+  --outdir results/final/
 ```
 
 #### Results
@@ -71,9 +71,7 @@ python3 build_real_baseline_benchmarking.py \
 | Squidpy NE | — | — | 0.50 — chance | Not computed† |
 | Moran's I (esda) | — | — | 0.50 — chance | Not computed† |
 
-† Column name mismatch: Squidpy NE accesses `obs["immune_score"]` by name
-(spatial hallmarks uses `tcell_score`); Moran's I fails on NaN-containing score
-vectors. Both are implementation constraints, not operator failures.
+† Package-level software execution not completed in this cohort: `squidpy.gr.nhood_enrichment` requires the `immune_score` key (spatial hallmarks uses `tcell_score`) and `esda.Moran` requires NaN-free vectors. Both methods were benchmarked at the **proxy level** on identical score fields and graph structures (Moran's I ρ = −0.187; NE proxy ρ = +0.623); only their package-level re-execution in this cohort was incomplete.
 
 **Top-10% hotspot overlap (Jaccard):**
 T-cell score 0.14 (1.4× above 10% chance); LR proximity 0.05 (below chance).
@@ -119,10 +117,10 @@ Sections with > 5,000 spots subsampled uniformly to 5,000 (seed 42).
 Sample IDs verified to match between AnnData and hodge CSV before running.
 
 ```bash
-python3 build_real_baseline_benchmarking_hcc.py \
+python3 build_real_baseline_benchmarking.py \
   --adata  data/hcc/hcc_scored.h5ad \
-  --hodge  Benchmarking/results_hcc_hodge_interface_summary_valid.csv \
-  --outdir Benchmarking/results/final/ \
+  --hodge  results/hcc/results_hcc_hodge_interface_summary_valid.csv \
+  --outdir results/final/ \
   --max-spots 5000 \
   --n-perm 99
 ```
@@ -142,10 +140,11 @@ python3 build_real_baseline_benchmarking_hcc.py \
 Squidpy NE fails internally on the same issue.
 Both are implementation constraints in the HCC subsampling context.
 
-\* AUC 0.47 reflects the generic Q75 interface heuristic degrading on
-post-therapy tissue where immune cells have infiltrated the tumour core.
-Script limitation, not operator limitation; biological endpoint recovery
-remains positive.
+\* AUC 0.47: the generic Q75 interface heuristic was developed for
+tumour-core/interface architectures and may not optimally represent
+post-treatment HCC tissue characterised by diffuse immune infiltration
+into the tumour core. Interface discrimination should be interpreted
+cautiously in this cohort; biological endpoint recovery remains positive.
 
 **Top-10% hotspot overlap (Jaccard):** immune score 0.20 (2.0× above chance);
 LR proximity 0.06 (near chance).
@@ -181,7 +180,7 @@ sections.
 | Pan-cancer (6 types) | 26 | **−0.650**\*\* | −0.056 | +0.248 | **0.65** | 1.70× | 1.70× |
 | HCC (immunotherapy) | 15 | −0.182 (p=0.516) | +0.857\*\* | +0.764\*\* | 0.47† | 1.34× | 1.54× |
 
-\*\* p ≤ 0.001  † Interface heuristic limitation on post-therapy tissue
+\*\* p ≤ 0.001  † Interface heuristic mismatch with post-therapy tissue architecture (interpret cautiously)
 
 The pan-cancer LR anti-correlation (ρ = −0.650, p < 0.001 across six cancer
 types) is the strongest non-redundancy finding: LR proximity and coexact

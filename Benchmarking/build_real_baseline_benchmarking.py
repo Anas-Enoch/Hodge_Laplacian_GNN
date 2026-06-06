@@ -129,39 +129,58 @@ def top_overlap(a, b, frac=0.10):
 #  B1 — Squidpy Neighbourhood Enrichment
 # ══════════════════════════════════════════════════════════════════════════
 
-def run_squidpy_nhood_enrichment(adata_sec):
+def run_squidpy_nhood_enrichment(adata_sec, tumor_vals=None, immune_vals=None):
     """
     Squidpy nhood_enrichment: tests whether two cell-type clusters
     co-occur more than expected by label permutation.
 
     Returns section-level tumour-immune enrichment z-score.
     This captures ADJACENCY FREQUENCY but not field geometry.
+
+    tumor_vals / immune_vals: programme score arrays resolved by detect_col()
+    in the caller, so this function does not depend on fixed column names.
     """
     try:
         import squidpy as sq
+
+        # Resolve programme scores — prefer passed arrays, fall back to obs columns
+        obs = adata_sec.obs.copy()
+        if tumor_vals is None:
+            tumor_vals = obs["tumor_score"].values if "tumor_score" in obs else None
+        if immune_vals is None:
+            for c in ("immune_score", "tcell_score"):
+                if c in obs:
+                    immune_vals = obs[c].values; break
+        if tumor_vals is None or immune_vals is None:
+            return np.nan
+
+        tumor_vals  = np.nan_to_num(np.asarray(tumor_vals, float), nan=np.nanmin(tumor_vals))
+        immune_vals = np.nan_to_num(np.asarray(immune_vals, float), nan=np.nanmin(immune_vals))
 
         # Build spatial graph
         sq.gr.spatial_neighbors(adata_sec, coord_type="generic",
                                 n_neighs=6, key_added="spatial")
 
-        # Assign coarse labels
-        obs = adata_sec.obs.copy()
-        obs["coarse"] = "other"
-        obs.loc[obs["tumor_score"] >= obs["tumor_score"].quantile(0.75),
-                "coarse"] = "tumor"
-        obs.loc[obs["immune_score"] >= obs["immune_score"].quantile(0.75),
-                "coarse"] = "immune"
-        adata_sec.obs["coarse"] = obs["coarse"].values
+        # Assign coarse labels from resolved arrays
+        coarse = np.array(["other"] * len(obs), dtype=object)
+        t_thr = np.nanquantile(tumor_vals, 0.75)
+        i_thr = np.nanquantile(immune_vals, 0.75)
+        coarse[tumor_vals  >= t_thr] = "tumor"
+        coarse[immune_vals >= i_thr] = "immune"
+        import pandas as _pd
+        adata_sec.obs["coarse"] = _pd.Categorical(coarse)
 
-        sq.gr.nhood_enrichment(adata_sec, cluster_key="coarse", seed=42)
+        sq.gr.nhood_enrichment(adata_sec, cluster_key="coarse", seed=42,
+                               n_jobs=1, show_progress_bar=False)
         z = adata_sec.uns["coarse_nhood_enrichment"]["zscore"]
 
         cats = list(adata_sec.obs["coarse"].cat.categories)
-        ti = cats.index("tumor") if "tumor" in cats else 0
-        ii = cats.index("immune") if "immune" in cats else 1
+        if "tumor" not in cats or "immune" not in cats:
+            return np.nan
+        ti = cats.index("tumor"); ii = cats.index("immune")
         return float(z[ti, ii])
 
-    except Exception as e:
+    except Exception:
         return np.nan
 
 
@@ -175,10 +194,23 @@ def run_morans_I(coords, values):
 
     Measures SCALAR SPATIAL AUTOCORRELATION of the immune score.
     Captures clustering but not antisymmetric field structure.
+
+    NaN entries are mean-imputed before weight construction so the
+    statistic executes cleanly on Visium sections that contain
+    out-of-tissue spots with undefined scores.
     """
     try:
         import libpysal.weights as lw
         from esda import Moran
+
+        values = np.asarray(values, dtype=float)
+        if np.all(np.isnan(values)):
+            return np.nan, np.nan
+        # Mean-impute NaN entries (esda.Moran requires NaN-free vectors)
+        finite_mean = np.nanmean(values)
+        values = np.where(np.isnan(values), finite_mean, values)
+        if np.std(values) < EPS:
+            return np.nan, np.nan
 
         kd = lw.KNN.from_array(coords, k=6)
         mi = Moran(values, kd, permutations=0)
@@ -452,7 +484,7 @@ def process_section(sid, adata, hodge_path, k, n_perm, args):
     coexact_ratio, coexact_frac = load_coexact(hodge_path, sid)
 
     # ── B1: Squidpy NE ────────────────────────────────────────────────────
-    ne_zscore = run_squidpy_nhood_enrichment(adata)
+    ne_zscore = run_squidpy_nhood_enrichment(adata, tumor_vals=tumor, immune_vals=immune)
 
     # ── B2: Moran's I ─────────────────────────────────────────────────────
     morans_I, morans_z = run_morans_I(coords, immune)
@@ -969,4 +1001,12 @@ def main():
 
 
 if __name__ == "__main__":
+    # Python 3.14 on macOS defaults to 'spawn', which breaks Squidpy's
+    # internal multiprocessing (Manager().Queue() re-imports the module).
+    # Force 'fork' (the pre-3.8 default Squidpy was written for).
+    import multiprocessing as _mp
+    try:
+        _mp.set_start_method("fork", force=True)
+    except RuntimeError:
+        pass  # already set
     main()

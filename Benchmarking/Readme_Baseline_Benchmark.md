@@ -60,18 +60,19 @@ python3 build_real_baseline_benchmarking.py \
   --outdir results/final/
 ```
 
-#### Results
+#### Results — all five baselines fully package-executed
 
 | Method | Spearman ρ | p | Interface LOO AUC | Interpretation |
 |---|---|---|---|---|
-| **Hodge coexact (operator)** | +1.00 (ref.) | — | **0.65** | Only method above chance |
-| LR proximity (COMMOT) | **−0.650** | <0.001 | 0.43 — below chance | Significant anti-correlation |
+| **Hodge coexact (operator)** | +1.00 (ref.) | — | **0.65** | Only method matching its own discrimination |
+| Squidpy NE | **−0.660** | 0.001 | — | Significant negative (segregation ↔ coexact) |
+| LR proximity (COMMOT) | **−0.650** | <0.001 | 0.43 — below chance | Significant negative (anti-complementarity) |
+| Moran's I (esda) | **+0.497** | 0.010 | 0.56 — above chance | Significant positive; ~25% shared variance |
 | SpatialDE FSV | +0.248 | 0.222 | 0.50 — chance | Not significant |
 | SPARK-X equiv. | −0.056 | 0.784 | 0.50 — chance | Effectively zero |
-| Squidpy NE | — | — | 0.50 — chance | Not computed† |
-| Moran's I (esda) | — | — | 0.50 — chance | Not computed† |
 
-† Package-level software execution not completed in this cohort: `squidpy.gr.nhood_enrichment` requires the `immune_score` key (spatial hallmarks uses `tcell_score`) and `esda.Moran` requires NaN-free vectors. Both methods were benchmarked at the **proxy level** on identical score fields and graph structures (Moran's I ρ = −0.187; NE proxy ρ = +0.623); only their package-level re-execution in this cohort was incomplete.
+Squidpy NE produced section-level z-scores (no spot-level AUC).
+Coverage: NE 23/26 sections, all others 26/26.
 
 **Top-10% hotspot overlap (Jaccard):**
 T-cell score 0.14 (1.4× above 10% chance); LR proximity 0.05 (below chance).
@@ -80,32 +81,39 @@ T-cell score 0.14 (1.4× above 10% chance); LR proximity 0.05 (below chance).
 exhaustion markers **1.70×**, cytotoxic markers **1.70×** over background
 (n = 26 sections, 6 cancer types).
 
-#### Interpretation
+#### Interpretation — three-way correlation structure
 
-**LR proximity (ρ = −0.650, p < 0.001)** is the strongest result. It is a
-significant *anti-correlation*: sections where COMMOT-style distance-weighted
-tumour–immune LR co-expression is highest have the *lowest* coexact interface
-enrichment ratio. The two methods capture mutually exclusive spatial regimes —
-diffuse co-expression across the section (high LR) versus a sharp, concentrated
-non-gradient boundary (high coexact). A reviewer who argues "coexact is just
-LR proximity in disguise" is stopped by their own logic: the two are
-anti-correlated across six cancer types simultaneously.
+The complete benchmark reveals a mechanistically coherent three-way structure
+rather than uniform orthogonality:
 
-**SPARK-X (ρ = −0.056, p = 0.784)** is effectively zero. Spatial variability
-of T-cell expression carries no cross-section information about coexact interface
-enrichment. Clean structural non-redundancy.
+**Two significant negative correlations — NE (−0.660) and LR (−0.650).**
+Both near-identical in magnitude. Squidpy NE z-scores are strongly negative
+(tumour and immune populations spatially *segregated*, not intermixed); the more
+segregated the boundary, the higher the coexact enrichment. Combined with the LR
+anti-correlation, this means sharp segregated boundaries produce high coexact
+organisation while diffuse intermixing produces low coexact organisation. Two
+independent adjacency/co-expression methods converge on the same
+anti-complementarity — stronger than LR alone.
 
-**SpatialDE FSV (ρ = +0.248, p = 0.222)** is not significant. A small positive
-trend (sections with higher GP spatial variance tend to have slightly higher
-coexact enrichment) is mechanistically coherent but too weak to survive at n = 26.
+**One significant positive correlation — Moran's I (+0.497, p = 0.010).**
+Immune-programme spatial autocorrelation shares variance with coexact enrichment;
+both respond to immune spatial organisation. But ρ² ≈ 25% shared variance leaves
+75% of the cross-section ordering unexplained. Moran's I reaches interface AUC
+0.56 — above chance, the best of any baseline, but well below coexact's 0.65.
+Coexact is **partially related to but not reducible to** scalar autocorrelation:
+it captures the immune-clustering signal Moran's I sees *plus* additional
+non-gradient interface geometry Moran's I cannot localise.
 
-**Interface LOO AUC:** Only the coexact operator exceeds chance (0.65). Every
-baseline at 0.50 or below. LR proximity at 0.43 (below chance) confirms at the
-spot level what the Spearman shows at the section level: LR-dense spots are not
-at the coexact boundary.
+**Two orthogonal — SPARK-X (−0.056) and SpatialDE (+0.248), both n.s.**
+Spatial variability of expression carries no cross-section information about
+coexact enrichment.
 
-**Biological endpoint (1.70×):** Stable across every run and unaffected by any
-column-name issue. The coexact-defined interface spots carry 70% higher T-cell
+**Decisive non-redundancy evidence — interface AUC.** No baseline matches the
+coexact operator (0.65); Moran's I, the closest, tops out at 0.56. The operator
+localises interface geometry that even its most-correlated baseline cannot.
+
+**Biological endpoint (1.70×):** Stable across every run. The coexact-defined
+interface spots carry 70% higher T-cell
 exhaustion and cytotoxic marker expression regardless of cancer type. This is
 the most robust result in the benchmark.
 
@@ -175,16 +183,28 @@ sections.
 
 ### Cross-cohort summary
 
-| Cohort | n | LR ρ | SPARK-X ρ | SpatialDE ρ | Coexact AUC | Exhaustion | Cytotoxic |
-|---|---|---|---|---|---|---|---|
-| Pan-cancer (6 types) | 26 | **−0.650**\*\* | −0.056 | +0.248 | **0.65** | 1.70× | 1.70× |
-| HCC (immunotherapy) | 15 | −0.182 (p=0.516) | +0.857\*\* | +0.764\*\* | 0.47† | 1.34× | 1.54× |
+Spearman ρ vs. coexact enrichment ratio (per cohort):
 
-\*\* p ≤ 0.001  † Interface heuristic mismatch with post-therapy tissue architecture (interpret cautiously)
+| Cohort | n | NE | Moran's I | SPARK-X | SpatialDE | LR prox. | Coexact AUC | Bio (exh/cyt) |
+|---|---|---|---|---|---|---|---|---|
+| Pan-cancer (6 types) | 26 | **−0.660**\*\* | **+0.497**\* | −0.056 | +0.248 | **−0.650**\*\*\* | **0.65** | 1.70× / 1.70× |
+| HCC (immunotherapy) | 15 | n.c. | n.c. | **+0.857**\*\* | **+0.764**\*\* | −0.182 | 0.47† | 1.34× / 1.54× |
 
-The pan-cancer LR anti-correlation (ρ = −0.650, p < 0.001 across six cancer
-types) is the strongest non-redundancy finding: LR proximity and coexact
-enrichment are structurally anti-complementary geometries, not independent ones.
+\* p<0.05  \*\* p≤0.001  \*\*\* p<0.001  n.c. = not computed (HCC subsampling)
+† Interface heuristic mismatch with post-therapy tissue architecture (interpret cautiously)
+
+**Pan-cancer three-way structure** is the central non-redundancy finding:
+two methods anti-correlate (NE −0.660, LR −0.650 — segregated boundaries
+↔ high coexact), one partially correlates (Moran's I +0.497 — shared immune
+clustering, ~25% variance), two are orthogonal (SPARK-X, SpatialDE). No baseline
+reaches coexact's interface discrimination (AUC 0.65; best baseline Moran's I 0.56),
+establishing that coexact captures interface geometry irreducible to any single
+existing method family.
+
+**HCC** shows a different profile: SPARK-X and SpatialDE correlate positively
+within this single-cancer-type therapy cohort (contextual co-variation, AUC 0.50
+— geometrically inert), confirming that cross-section correlation and spot-level
+discrimination are orthogonal properties.
 The HCC result confirms biological endpoint recovery under immunotherapy.
 
 ---

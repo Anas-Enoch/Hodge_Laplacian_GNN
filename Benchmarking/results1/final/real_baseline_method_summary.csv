@@ -1,6 +1,6 @@
 method,spearman_rho_vs_coexact,spearman_p,median_auc_interface_vs_core,bio_exhaustion_recovery,bio_cytotoxic_recovery
-Squidpy NE,—,—,—,1.7,1.7
-Moran's I,—,—,—,1.7,1.7
+Squidpy NE,-0.66,0.001,—,1.7,1.7
+Moran's I,0.497,0.010,0.559,1.7,1.7
 SPARK-X equiv,-0.056,0.784,0.5,1.7,1.7
 SpatialDE FSV,0.248,0.222,0.5,1.7,1.7
 LR proximity,-0.65,0.000,0.434,1.7,1.7
